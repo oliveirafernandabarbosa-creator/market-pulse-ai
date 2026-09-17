@@ -1,891 +1,686 @@
-import streamlit as st
+         import streamlit as st
 import pandas as pd
 import altair as alt
+import os
 
-# =========================================================
+# ============================================================
 # CONFIGURAÇÃO
-# =========================================================
+# ============================================================
 
 st.set_page_config(
     page_title="Market Pulse AI",
-    page_icon="🧠",
+    page_icon="📡",
     layout="wide"
 )
 
-ARQUIVO = "dados_streaming_market_pulse_novos_players (3).csv"
+# ============================================================
+# BASE
+# ============================================================
 
+ARQUIVOS_POSSIVEIS = [
+    "dados_streaming_market_pulse_novos_players (3).csv",
+    "dados_streaming_market_pulse_novos_players.csv",
+    "dados_streaming_market_pulse.csv",
+]
 
-# =========================================================
-# CARREGAMENTO
-# =========================================================
+arquivo_base = None
 
-@st.cache_data
-def carregar_dados():
-    df = pd.read_csv(ARQUIVO)
+for arquivo in ARQUIVOS_POSSIVEIS:
+    if os.path.exists(arquivo):
+        arquivo_base = arquivo
+        break
 
-    for coluna in df.columns:
-        if "data" in coluna.lower() or "date" in coluna.lower():
-            try:
-                df[coluna] = pd.to_datetime(df[coluna])
-            except:
-                pass
-
-    return df
-
-
-try:
-    df = carregar_dados()
-
-except Exception as e:
-    st.error("Não consegui carregar a base.")
-    st.code(str(e))
+if arquivo_base is None:
+    st.error("Base de dados não encontrada no repositório.")
     st.stop()
 
+df = pd.read_csv(arquivo_base)
 
-# =========================================================
-# IDENTIFICAÇÃO AUTOMÁTICA DAS COLUNAS
-# =========================================================
+# ============================================================
+# PADRONIZAÇÃO DOS NOMES DAS COLUNAS
+# ============================================================
 
-def encontrar_coluna(palavras):
+df.columns = [
+    str(c).strip().lower().replace(" ", "_")
+    for c in df.columns
+]
+
+def localizar_coluna(possiveis):
+    for nome in possiveis:
+        if nome in df.columns:
+            return nome
 
     for coluna in df.columns:
-
-        nome = coluna.lower().strip()
-
-        if any(palavra in nome for palavra in palavras):
-            return coluna
+        for nome in possiveis:
+            if nome in coluna:
+                return coluna
 
     return None
 
 
-col_player = encontrar_coluna(
-    ["player", "empresa", "plataforma", "marca"]
-)
+col_player = localizar_coluna([
+    "player", "operadora", "empresa"
+])
 
-col_regiao = encontrar_coluna(
-    ["regiao", "região", "region"]
-)
+col_periodo = localizar_coluna([
+    "periodo", "período", "mes", "mês", "data"
+])
 
-col_periodo = encontrar_coluna(
-    ["periodo", "período", "mes", "mês", "data", "date"]
-)
+col_regiao = localizar_coluna([
+    "regiao", "região", "uf", "estado"
+])
 
-col_assinantes = encontrar_coluna(
-    ["assinantes", "assinatura", "clientes", "base"]
-)
+col_share = localizar_coluna([
+    "market_share", "share"
+])
 
-col_churn = encontrar_coluna(
-    ["churn"]
-)
+col_assinantes = localizar_coluna([
+    "assinantes", "assinaturas", "clientes", "base_clientes"
+])
 
-col_satisfacao = encontrar_coluna(
-    ["satisfacao", "satisfação", "csat"]
-)
+col_churn = localizar_coluna([
+    "churn", "churn_medio"
+])
 
-col_nps = encontrar_coluna(
-    ["nps"]
-)
+col_nps = localizar_coluna([
+    "nps"
+])
 
-col_share = encontrar_coluna(
-    ["market_share", "market share", "share"]
-)
+col_satisfacao = localizar_coluna([
+    "satisfacao", "satisfação", "csat"
+])
 
-col_crescimento = encontrar_coluna(
-    ["crescimento", "growth"]
-)
+# ============================================================
+# CONVERTER INDICADORES PARA NÚMERO
+# ============================================================
 
-col_receita = encontrar_coluna(
-    ["receita", "revenue", "faturamento"]
-)
+colunas_numericas = [
+    col_share,
+    col_assinantes,
+    col_churn,
+    col_nps,
+    col_satisfacao
+]
 
-col_aquisicao = encontrar_coluna(
-    ["aquisicao", "aquisição", "adicoes", "adições"]
-)
+for coluna in colunas_numericas:
+    if coluna and coluna in df.columns:
+        df[coluna] = pd.to_numeric(
+            df[coluna]
+            .astype(str)
+            .str.replace("%", "", regex=False)
+            .str.replace(",", ".", regex=False),
+            errors="coerce"
+        )
 
+# ============================================================
+# TÍTULO
+# ============================================================
 
-# =========================================================
-# CABEÇALHO
-# =========================================================
+st.title("📡 Market Pulse AI")
 
-st.title("🧠 Market Pulse — Radar Inteligente")
-
-st.subheader(
-    "Inteligência de Mercado potencializada por IA"
-)
+st.subheader("Inteligência de Mercado potencializada por IA")
 
 st.caption(
-    "Radar experimental desenvolvido com dados sintéticos "
-    "para identificação de movimentos competitivos."
+    "Radar experimental desenvolvido com dados sintéticos para "
+    "identificação de movimentos competitivos, riscos e oportunidades."
 )
 
-st.success(
-    f"🟢 Monitoramento ativo • {len(df):,.0f} registros analisados"
-)
-
-
-# =========================================================
+# ============================================================
 # FILTROS
-# =========================================================
+# ============================================================
 
 st.sidebar.header("🔎 Filtros")
 
 df_filtrado = df.copy()
 
-
 if col_player:
-
     players = sorted(
-        df[col_player].dropna().astype(str).unique()
+        df[col_player].dropna().astype(str).unique().tolist()
     )
 
-    player = st.sidebar.selectbox(
+    player_selecionado = st.sidebar.selectbox(
         "Player",
         ["Todos"] + players
     )
 
-    if player != "Todos":
-
+    if player_selecionado != "Todos":
         df_filtrado = df_filtrado[
-            df_filtrado[col_player].astype(str) == player
+            df_filtrado[col_player].astype(str) == player_selecionado
         ]
 
 
 if col_regiao:
-
     regioes = sorted(
-        df[col_regiao].dropna().astype(str).unique()
+        df[col_regiao].dropna().astype(str).unique().tolist()
     )
 
-    regiao = st.sidebar.selectbox(
+    regiao_selecionada = st.sidebar.selectbox(
         "Região",
         ["Todas"] + regioes
     )
 
-    if regiao != "Todas":
-
+    if regiao_selecionada != "Todas":
         df_filtrado = df_filtrado[
-            df_filtrado[col_regiao].astype(str) == regiao
+            df_filtrado[col_regiao].astype(str) == regiao_selecionada
         ]
 
 
 if col_periodo:
-
     periodos = sorted(
-        df[col_periodo]
-        .dropna()
-        .astype(str)
-        .unique()
+        df[col_periodo].dropna().astype(str).unique().tolist()
     )
 
-    periodo = st.sidebar.selectbox(
+    periodo_selecionado = st.sidebar.selectbox(
         "Período",
         ["Todos"] + periodos
     )
 
-    if periodo != "Todos":
-
+    if periodo_selecionado != "Todos":
         df_filtrado = df_filtrado[
-            df_filtrado[col_periodo].astype(str) == periodo
+            df_filtrado[col_periodo].astype(str) == periodo_selecionado
         ]
 
+# ============================================================
+# STATUS
+# ============================================================
 
-# =========================================================
-# METAS ILUSTRATIVAS
-# =========================================================
-
-META_NPS = 70
-META_SATISFACAO = 8.0
-META_CHURN = 5.0
-META_CRESCIMENTO = 5.0
-
-st.sidebar.divider()
-
-st.sidebar.subheader("🎯 Metas do Radar")
-
-st.sidebar.caption("NPS ≥ 70")
-st.sidebar.caption("Satisfação ≥ 8,0")
-st.sidebar.caption("Churn ≤ 5,0%")
-st.sidebar.caption("Crescimento ≥ 5,0%")
-
-st.sidebar.caption(
-    "Metas ilustrativas definidas exclusivamente para o protótipo."
+st.success(
+    f"🟢 Monitoramento ativo • "
+    f"{len(df_filtrado):,.0f} registros analisados"
+    .replace(",", ".")
 )
 
-
-# =========================================================
+# ============================================================
 # FUNÇÕES
-# =========================================================
+# ============================================================
 
-def media(coluna, padrao=0):
+def media(coluna, base=None):
+    if base is None:
+        base = df_filtrado
 
-    if coluna and coluna in df_filtrado.columns:
-
+    if coluna and coluna in base.columns:
         valor = pd.to_numeric(
-            df_filtrado[coluna],
+            base[coluna],
             errors="coerce"
         ).mean()
 
         if pd.notna(valor):
-            return valor
+            return float(valor)
 
-    return padrao
+    return 0.0
 
 
-def soma(coluna, padrao=0):
+def soma(coluna, base=None):
+    if base is None:
+        base = df_filtrado
 
-    if coluna and coluna in df_filtrado.columns:
-
+    if coluna and coluna in base.columns:
         valor = pd.to_numeric(
-            df_filtrado[coluna],
+            base[coluna],
             errors="coerce"
         ).sum()
 
         if pd.notna(valor):
-            return valor
+            return float(valor)
 
-    return padrao
+    return 0.0
 
 
-# =========================================================
-# CÁLCULO DOS KPIs
-# =========================================================
+# ============================================================
+# INDICADORES PRINCIPAIS
+# ============================================================
 
 assinantes = soma(col_assinantes)
 
 churn = media(col_churn)
 
-satisfacao = media(col_satisfacao)
-
 nps = media(col_nps)
 
-crescimento = media(col_crescimento)
-
-receita = soma(col_receita)
-
-aquisicao = soma(col_aquisicao)
+satisfacao = media(col_satisfacao)
 
 players_monitorados = (
     df_filtrado[col_player].nunique()
-    if col_player else 0
+    if col_player
+    else 0
 )
 
+# ============================================================
+# CRESCIMENTO
+# Calculado sobre a base SEM o filtro de período.
+# Assim, selecionar um mês não destrói a comparação histórica.
+# ============================================================
 
-# Valores arredondados utilizados na exibição e comparação
+crescimento = 0.0
 
-nps_exib = round(nps)
-satisfacao_exib = round(satisfacao, 1)
-churn_exib = round(churn, 1)
-crescimento_exib = round(crescimento, 1)
+base_crescimento = df.copy()
 
+# mantém filtros de Player e Região
+if col_player and "player_selecionado" in locals():
+    if player_selecionado != "Todos":
+        base_crescimento = base_crescimento[
+            base_crescimento[col_player].astype(str)
+            == player_selecionado
+        ]
 
-# =========================================================
-# VISÃO EXECUTIVA
-# =========================================================
+if col_regiao and "regiao_selecionada" in locals():
+    if regiao_selecionada != "Todas":
+        base_crescimento = base_crescimento[
+            base_crescimento[col_regiao].astype(str)
+            == regiao_selecionada
+        ]
 
-st.divider()
+if col_periodo and col_assinantes:
 
-st.subheader("📊 Visão Executiva")
+    crescimento_periodo = (
+        base_crescimento
+        .groupby(col_periodo, as_index=False)[col_assinantes]
+        .sum()
+    )
+
+    crescimento_periodo["_periodo_ordem"] = (
+        crescimento_periodo[col_periodo].astype(str)
+    )
+
+    crescimento_periodo = crescimento_periodo.sort_values(
+        "_periodo_ordem"
+    )
+
+    # Se um período específico estiver selecionado,
+    # compara esse período com o imediatamente anterior.
+    if (
+        "periodo_selecionado" in locals()
+        and periodo_selecionado != "Todos"
+    ):
+
+        lista_periodos = (
+            crescimento_periodo[col_periodo]
+            .astype(str)
+            .tolist()
+        )
+
+        if periodo_selecionado in lista_periodos:
+
+            indice = lista_periodos.index(periodo_selecionado)
+
+            if indice > 0:
+                anterior = crescimento_periodo.iloc[
+                    indice - 1
+                ][col_assinantes]
+
+                atual = crescimento_periodo.iloc[
+                    indice
+                ][col_assinantes]
+
+                if anterior != 0:
+                    crescimento = (
+                        (atual - anterior) / anterior
+                    ) * 100
+
+    elif len(crescimento_periodo) >= 2:
+
+        anterior = crescimento_periodo.iloc[-2][col_assinantes]
+        atual = crescimento_periodo.iloc[-1][col_assinantes]
+
+        if anterior != 0:
+            crescimento = (
+                (atual - anterior) / anterior
+            ) * 100
+
+# ============================================================
+# KPIs
+# ============================================================
+
+st.markdown("## 📊 Visão Executiva")
 
 k1, k2, k3, k4, k5 = st.columns(5)
 
-
 with k1:
-
     if assinantes >= 1_000_000:
-
-        valor_assinantes = (
+        st.metric(
+            "Assinantes monitorados",
             f"{assinantes / 1_000_000:.1f} M"
         )
-
-    elif assinantes >= 1_000:
-
-        valor_assinantes = (
-            f"{assinantes / 1_000:.1f} mil"
-        )
-
     else:
-
-        valor_assinantes = f"{assinantes:,.0f}"
-
-    st.metric(
-        "Assinantes monitorados",
-        valor_assinantes
-    )
-
+        st.metric(
+            "Assinantes monitorados",
+            f"{assinantes:,.0f}"
+        )
 
 with k2:
-
     st.metric(
         "Churn médio",
-        f"{churn_exib:.1f}%"
+        f"{churn:.1f}%"
     )
-
 
 with k3:
-
-    st.metric(
-        "Satisfação",
-        f"{satisfacao_exib:.1f}/10"
-    )
-
-
-with k4:
-
-    st.metric(
-        "NPS médio",
-        f"{nps_exib:.0f}"
-    )
-
-
-with k5:
-
-    st.metric(
-        "Players monitorados",
-        players_monitorados
-    )
-
-
-# =========================================================
-# PERFORMANCE VS META
-# =========================================================
-
-st.divider()
-
-st.subheader("🎯 Performance vs. Meta")
-
-
-gap_nps = nps_exib - META_NPS
-
-gap_satisfacao = (
-    satisfacao_exib - META_SATISFACAO
-)
-
-gap_churn = (
-    churn_exib - META_CHURN
-)
-
-gap_crescimento = (
-    crescimento_exib - META_CRESCIMENTO
-)
-
-
-p1, p2, p3, p4 = st.columns(4)
-
-
-# NPS
-with p1:
-
     st.metric(
         "NPS",
-        f"{nps_exib:.0f}",
-        f"Meta ≥ {META_NPS}"
+        f"{nps:.0f}"
     )
 
-    if gap_nps > 0:
-
-        st.success(
-            f"▲ {abs(gap_nps):.0f} pontos acima da meta"
-        )
-
-    elif gap_nps < 0:
-
-        st.warning(
-            f"▼ {abs(gap_nps):.0f} pontos abaixo da meta"
-        )
-
-    else:
-
-        st.success("● Exatamente na meta")
-
-
-# SATISFAÇÃO
-with p2:
-
+with k4:
     st.metric(
         "Satisfação",
-        f"{satisfacao_exib:.1f}",
-        f"Meta ≥ {META_SATISFACAO:.1f}"
+        f"{satisfacao:.1f}/10"
     )
 
-    if gap_satisfacao > 0:
-
-        st.success(
-            f"▲ {abs(gap_satisfacao):.1f} "
-            "ponto acima da meta"
-        )
-
-    elif gap_satisfacao < 0:
-
-        st.warning(
-            f"▼ {abs(gap_satisfacao):.1f} "
-            "ponto abaixo da meta"
-        )
-
-    else:
-
-        st.success("● Exatamente na meta")
-
-
-# CHURN
-with p3:
-
-    st.metric(
-        "Churn",
-        f"{churn_exib:.1f}%",
-        f"Limite ≤ {META_CHURN:.1f}%"
-    )
-
-    if gap_churn > 0:
-
-        st.error(
-            f"▲ {abs(gap_churn):.1f} p.p. "
-            "acima do limite"
-        )
-
-    elif gap_churn < 0:
-
-        st.success(
-            f"▼ {abs(gap_churn):.1f} p.p. "
-            "abaixo do limite"
-        )
-
-    else:
-
-        st.success("● Exatamente no limite")
-
-
-# CRESCIMENTO
-with p4:
-
+with k5:
     st.metric(
         "Crescimento",
-        f"{crescimento_exib:.1f}%",
-        f"Meta ≥ {META_CRESCIMENTO:.1f}%"
+        f"{crescimento:+.1f}%"
     )
 
-    if gap_crescimento > 0:
-
-        st.success(
-            f"▲ {abs(gap_crescimento):.1f} p.p. "
-            "acima da meta"
-        )
-
-    elif gap_crescimento < 0:
-
-        st.warning(
-            f"▼ {abs(gap_crescimento):.1f} p.p. "
-            "abaixo da meta"
-        )
-
-    else:
-
-        st.success("● Exatamente na meta")
-
-
-# =========================================================
-# MARKET SHARE ATUAL
-# =========================================================
+st.caption(
+    f"Players monitorados: {players_monitorados}"
+)
 
 st.divider()
 
-st.subheader("📡 Monitoramento Competitivo")
+# ============================================================
+# PERFORMANCE VS META
+# ============================================================
 
+st.markdown("## 🎯 Performance vs. Meta")
+
+META_NPS = 70
+META_SATISFACAO = 8.0
+LIMITE_CHURN = 5.0
+META_CRESCIMENTO = 5.0
+
+dif_nps = nps - META_NPS
+dif_satisfacao = satisfacao - META_SATISFACAO
+
+# Para churn, positivo = pior que o limite
+dif_churn = churn - LIMITE_CHURN
+
+dif_crescimento = crescimento - META_CRESCIMENTO
+
+m1, m2, m3, m4 = st.columns(4)
+
+with m1:
+    st.metric(
+        "NPS",
+        f"{nps:.0f}",
+        f"{dif_nps:+.1f} pts vs. meta"
+    )
+
+    if nps >= META_NPS:
+        st.success("Meta atingida")
+    else:
+        st.warning("Abaixo da meta")
+
+
+with m2:
+    st.metric(
+        "Satisfação",
+        f"{satisfacao:.1f}",
+        f"{dif_satisfacao:+.1f} pt vs. meta"
+    )
+
+    if satisfacao >= META_SATISFACAO:
+        st.success("Meta atingida")
+    else:
+        st.warning("Abaixo da meta")
+
+
+with m3:
+    st.metric(
+        "Churn",
+        f"{churn:.1f}%",
+        f"{dif_churn:+.1f} p.p. vs. limite",
+        delta_color="inverse"
+    )
+
+    if churn <= LIMITE_CHURN:
+        st.success("Dentro do limite")
+    else:
+        st.error("Acima do limite")
+
+
+with m4:
+    st.metric(
+        "Crescimento",
+        f"{crescimento:+.1f}%",
+        f"{dif_crescimento:+.1f} p.p. vs. meta"
+    )
+
+    if crescimento >= META_CRESCIMENTO:
+        st.success("Meta atingida")
+    else:
+        st.warning("Abaixo da meta")
+
+st.divider()
+
+# ============================================================
+# MONITORAMENTO COMPETITIVO
+# ============================================================
+
+st.markdown("## 📡 Monitoramento Competitivo")
+
+# ============================================================
+# MARKET SHARE POR PLAYER
+# ============================================================
 
 if col_player and col_share:
 
-    dados_share = (
+    share_player = (
         df_filtrado
-        .groupby(col_player)[col_share]
+        .groupby(col_player, as_index=False)[col_share]
         .mean()
-        .reset_index()
-    )
-
-    dados_share[col_share] = pd.to_numeric(
-        dados_share[col_share],
-        errors="coerce"
-    )
-
-    barras_share = (
-        alt.Chart(dados_share)
-        .mark_bar(
-            cornerRadiusTopLeft=5,
-            cornerRadiusTopRight=5
+        .dropna()
+        .sort_values(
+            col_share,
+            ascending=False
         )
-        .encode(
+    )
 
-            x=alt.X(
+    st.markdown("**Market Share por Player (%)**")
+
+    barras = alt.Chart(
+        share_player
+    ).mark_bar(
+        cornerRadiusTopLeft=4,
+        cornerRadiusTopRight=4
+    ).encode(
+
+        x=alt.X(
+            f"{col_player}:N",
+            title="Player",
+            sort="-y"
+        ),
+
+        y=alt.Y(
+            f"{col_share}:Q",
+            title="Market Share (%)"
+        ),
+
+        tooltip=[
+            alt.Tooltip(
                 f"{col_player}:N",
-                title="Player",
-                sort="-y"
+                title="Player"
             ),
-
-            y=alt.Y(
+            alt.Tooltip(
                 f"{col_share}:Q",
-                title="Market Share (%)"
-            ),
-
-            tooltip=[
-
-                col_player,
-
-                alt.Tooltip(
-                    col_share,
-                    title="Market Share",
-                    format=".1f"
-                )
-            ]
-        )
-    )
-
-    rotulos_share = (
-        alt.Chart(dados_share)
-        .mark_text(
-            dy=-10,
-            fontSize=14
-        )
-        .encode(
-
-            x=alt.X(
-                f"{col_player}:N",
-                sort="-y"
-            ),
-
-            y=f"{col_share}:Q",
-
-            text=alt.Text(
-                f"{col_share}:Q",
+                title="Market Share",
                 format=".1f"
             )
+        ]
+    )
+
+    # RÓTULOS BRANCOS
+    textos = alt.Chart(
+        share_player
+    ).mark_text(
+        dy=-10,
+        color="white",
+        fontSize=13,
+        fontWeight="bold"
+    ).encode(
+
+        x=alt.X(
+            f"{col_player}:N",
+            sort="-y"
+        ),
+
+        y=alt.Y(
+            f"{col_share}:Q"
+        ),
+
+        text=alt.Text(
+            f"{col_share}:Q",
+            format=".1f"
         )
+    )
+
+    grafico_share = (
+        barras + textos
+    ).properties(
+        height=320
     )
 
     st.altair_chart(
-        (barras_share + rotulos_share)
-        .properties(
-            height=350,
-            title="Market Share por Player (%)"
-        ),
+        grafico_share,
         use_container_width=True
     )
 
+# ============================================================
+# EVOLUÇÃO DO MARKET SHARE
+# ============================================================
 
-# =========================================================
-# CHURN POR PLAYER + META
-# =========================================================
+if col_player and col_periodo and col_share:
 
-if col_player and col_churn:
+    st.markdown("## 📈 Evolução de Market Share")
 
-    dados_churn = (
-        df_filtrado
-        .groupby(col_player)[col_churn]
-        .mean()
-        .reset_index()
-    )
+    # usa histórico, mantendo filtros de Player/Região
+    base_historica = df.copy()
 
-    dados_churn[col_churn] = pd.to_numeric(
-        dados_churn[col_churn],
-        errors="coerce"
-    )
+    if (
+        "player_selecionado" in locals()
+        and player_selecionado != "Todos"
+    ):
+        base_historica = base_historica[
+            base_historica[col_player].astype(str)
+            == player_selecionado
+        ]
 
-    barras = (
-        alt.Chart(dados_churn)
-        .mark_bar()
-        .encode(
-
-            x=alt.X(
-                f"{col_player}:N",
-                title="Player"
-            ),
-
-            y=alt.Y(
-                f"{col_churn}:Q",
-                title="Churn (%)"
-            ),
-
-            tooltip=[
-
-                col_player,
-
-                alt.Tooltip(
-                    col_churn,
-                    format=".1f"
-                )
-            ]
-        )
-    )
-
-    linha_meta = (
-        alt.Chart(
-            pd.DataFrame(
-                {"Meta": [META_CHURN]}
-            )
-        )
-        .mark_rule(
-            strokeDash=[6, 4],
-            size=2
-        )
-        .encode(
-            y="Meta:Q"
-        )
-    )
-
-    st.altair_chart(
-        (barras + linha_meta)
-        .properties(
-            height=330,
-            title=(
-                f"Churn por Player | "
-                f"Limite: {META_CHURN}%"
-            )
-        ),
-        use_container_width=True
-    )
-
-
-# =========================================================
-# NPS POR PLAYER + META
-# =========================================================
-
-if col_player and col_nps:
-
-    dados_nps = (
-        df_filtrado
-        .groupby(col_player)[col_nps]
-        .mean()
-        .reset_index()
-    )
-
-    dados_nps[col_nps] = pd.to_numeric(
-        dados_nps[col_nps],
-        errors="coerce"
-    )
-
-    barras_nps = (
-        alt.Chart(dados_nps)
-        .mark_bar()
-        .encode(
-
-            x=alt.X(
-                f"{col_player}:N",
-                title="Player"
-            ),
-
-            y=alt.Y(
-                f"{col_nps}:Q",
-                title="NPS"
-            ),
-
-            tooltip=[
-                col_player,
-                alt.Tooltip(
-                    col_nps,
-                    format=".0f"
-                )
-            ]
-        )
-    )
-
-    meta_nps = (
-        alt.Chart(
-            pd.DataFrame(
-                {"Meta": [META_NPS]}
-            )
-        )
-        .mark_rule(
-            strokeDash=[6, 4],
-            size=2
-        )
-        .encode(
-            y="Meta:Q"
-        )
-    )
-
-    st.altair_chart(
-        (barras_nps + meta_nps)
-        .properties(
-            height=330,
-            title=(
-                f"NPS por Player | Meta: {META_NPS}"
-            )
-        ),
-        use_container_width=True
-    )
-
-
-# =========================================================
-# SATISFAÇÃO POR PLAYER
-# =========================================================
-
-if col_player and col_satisfacao:
-
-    dados_sat = (
-        df_filtrado
-        .groupby(col_player)[col_satisfacao]
-        .mean()
-        .reset_index()
-    )
-
-    dados_sat[col_satisfacao] = pd.to_numeric(
-        dados_sat[col_satisfacao],
-        errors="coerce"
-    )
-
-    barras_sat = (
-        alt.Chart(dados_sat)
-        .mark_bar()
-        .encode(
-
-            x=alt.X(
-                f"{col_player}:N",
-                title="Player"
-            ),
-
-            y=alt.Y(
-                f"{col_satisfacao}:Q",
-                title="Satisfação",
-                scale=alt.Scale(
-                    domain=[0, 10]
-                )
-            ),
-
-            tooltip=[
-                col_player,
-                alt.Tooltip(
-                    col_satisfacao,
-                    format=".1f"
-                )
-            ]
-        )
-    )
-
-    meta_sat = (
-        alt.Chart(
-            pd.DataFrame(
-                {"Meta": [META_SATISFACAO]}
-            )
-        )
-        .mark_rule(
-            strokeDash=[6, 4],
-            size=2
-        )
-        .encode(
-            y="Meta:Q"
-        )
-    )
-
-    st.altair_chart(
-        (barras_sat + meta_sat)
-        .properties(
-            height=330,
-            title=(
-                "Satisfação por Player | "
-                f"Meta: {META_SATISFACAO}"
-            )
-        ),
-        use_container_width=True
-    )
-
-
-# =========================================================
-# EVOLUÇÃO DE MARKET SHARE
-# =========================================================
-
-if col_periodo and col_share and col_player:
-
-    st.divider()
-
-    st.subheader("📈 Evolução de Market Share")
+    if (
+        col_regiao
+        and "regiao_selecionada" in locals()
+        and regiao_selecionada != "Todas"
+    ):
+        base_historica = base_historica[
+            base_historica[col_regiao].astype(str)
+            == regiao_selecionada
+        ]
 
     evolucao = (
-        df_filtrado
+        base_historica
         .groupby(
-            [col_periodo, col_player]
+            [col_periodo, col_player],
+            as_index=False
         )[col_share]
         .mean()
-        .reset_index()
+        .dropna()
     )
 
-    evolucao[col_share] = pd.to_numeric(
-        evolucao[col_share],
-        errors="coerce"
+    minimo_share = evolucao[col_share].min()
+    maximo_share = evolucao[col_share].max()
+
+    # "Zoom" no eixo Y para mostrar as oscilações.
+    margem = max(
+        (maximo_share - minimo_share) * 0.18,
+        1.5
     )
 
-    # Linha
-    linhas = (
-        alt.Chart(evolucao)
-        .mark_line(
-            point=True,
-            strokeWidth=2
-        )
-        .encode(
+    y_min = max(
+        0,
+        minimo_share - margem
+    )
 
-            x=alt.X(
-                f"{col_periodo}:N",
+    y_max = maximo_share + margem
+
+    linha = alt.Chart(
+        evolucao
+    ).mark_line(
+        point=alt.OverlayMarkDef(
+            filled=True,
+            size=55
+        ),
+        strokeWidth=2.5
+    ).encode(
+
+        x=alt.X(
+            f"{col_periodo}:O",
+            title="Período",
+            sort=None
+        ),
+
+        y=alt.Y(
+            f"{col_share}:Q",
+            title="Market Share (%)",
+            scale=alt.Scale(
+                domain=[y_min, y_max],
+                zero=False
+            )
+        ),
+
+        color=alt.Color(
+            f"{col_player}:N",
+            title="Player"
+        ),
+
+        tooltip=[
+            alt.Tooltip(
+                f"{col_periodo}:O",
                 title="Período"
             ),
-
-            y=alt.Y(
-                f"{col_share}:Q",
-                title="Market Share (%)"
-            ),
-
-            color=alt.Color(
+            alt.Tooltip(
                 f"{col_player}:N",
                 title="Player"
             ),
-
-            tooltip=[
-
-                alt.Tooltip(
-                    f"{col_periodo}:N",
-                    title="Período"
-                ),
-
-                alt.Tooltip(
-                    f"{col_player}:N",
-                    title="Player"
-                ),
-
-                alt.Tooltip(
-                    f"{col_share}:Q",
-                    title="Market Share",
-                    format=".1f"
-                )
-            ]
-        )
-    )
-
-    # Números sobre os pontos
-    labels = (
-        alt.Chart(evolucao)
-        .mark_text(
-            dy=-10,
-            fontSize=10
-        )
-        .encode(
-
-            x=alt.X(
-                f"{col_periodo}:N"
-            ),
-
-            y=alt.Y(
-                f"{col_share}:Q"
-            ),
-
-            color=alt.Color(
-                f"{col_player}:N",
-                legend=None
-            ),
-
-            text=alt.Text(
+            alt.Tooltip(
                 f"{col_share}:Q",
+                title="Share",
                 format=".1f"
             )
+        ]
+    )
+
+    # RÓTULOS EM CIMA DE CADA PONTO
+    rotulos = alt.Chart(
+        evolucao
+    ).mark_text(
+        dy=-10,
+        fontSize=10,
+        fontWeight="bold"
+    ).encode(
+
+        x=alt.X(
+            f"{col_periodo}:O",
+            sort=None
+        ),
+
+        y=alt.Y(
+            f"{col_share}:Q",
+            scale=alt.Scale(
+                domain=[y_min, y_max],
+                zero=False
+            )
+        ),
+
+        text=alt.Text(
+            f"{col_share}:Q",
+            format=".1f"
+        ),
+
+        color=alt.Color(
+            f"{col_player}:N",
+            legend=None
         )
     )
 
     grafico_evolucao = (
-        linhas + labels
+        linha + rotulos
     ).properties(
         height=430
     )
@@ -895,224 +690,127 @@ if col_periodo and col_share and col_player:
         use_container_width=True
     )
 
-    st.caption(
-        "Valores exibidos em pontos percentuais de participação."
-    )
-
-
-# =========================================================
-# RADAR INTELIGENTE
-# =========================================================
-
 st.divider()
 
-st.subheader("🚨 Radar Inteligente")
+# ============================================================
+# RADAR INTELIGENTE
+# ============================================================
+
+st.markdown("## 🚨 Radar Inteligente")
 
 alertas = []
+oportunidades = []
+alta_prioridade = 0
 
-
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 # 1. CHURN
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 
-if churn_exib > META_CHURN:
+if churn > LIMITE_CHURN:
 
-    desvio = churn_exib - META_CHURN
+    diferenca = churn - LIMITE_CHURN
 
-    alertas.append(
-        {
-            "nivel": "alto",
-            "titulo": "Pressão de retenção",
-            "texto": (
-                f"Churn médio em {churn_exib:.1f}%, "
-                f"{desvio:.1f} p.p. acima do limite "
-                f"de {META_CHURN:.1f}%."
-            )
-        }
+    alertas.append({
+        "nivel": "🔴",
+        "titulo": "Pressão de retenção",
+        "texto":
+            f"Churn médio em {churn:.1f}%, "
+            f"{diferenca:.1f} p.p. acima do "
+            f"limite de {LIMITE_CHURN:.1f}%."
+    })
+
+    alta_prioridade += 1
+
+elif churn < LIMITE_CHURN - 1:
+
+    oportunidades.append(
+        f"Churn de {churn:.1f}% está "
+        f"{LIMITE_CHURN - churn:.1f} p.p. "
+        "abaixo do limite."
     )
 
-
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 # 2. NPS
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 
-if nps_exib < META_NPS:
+if nps < META_NPS:
 
-    desvio = META_NPS - nps_exib
+    diferenca = META_NPS - nps
 
-    alertas.append(
-        {
-            "nivel": "medio",
-            "titulo": "Experiência abaixo da meta",
-            "texto": (
-                f"NPS em {nps_exib:.0f}, "
-                f"{desvio:.0f} pontos abaixo "
-                f"da meta de {META_NPS}."
-            )
-        }
+    alertas.append({
+        "nivel": "🟡",
+        "titulo": "Experiência abaixo da meta",
+        "texto":
+            f"NPS em {nps:.0f}, "
+            f"{diferenca:.0f} pontos abaixo "
+            f"da meta de {META_NPS}."
+    })
+
+else:
+
+    oportunidades.append(
+        f"NPS atingiu {nps:.0f}, "
+        f"{nps - META_NPS:.0f} pontos acima "
+        "da meta."
     )
 
-
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 # 3. SATISFAÇÃO
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 
-if satisfacao_exib < META_SATISFACAO:
+if satisfacao < META_SATISFACAO:
 
-    desvio = (
-        META_SATISFACAO - satisfacao_exib
+    alertas.append({
+        "nivel": "🟡",
+        "titulo": "Satisfação abaixo da meta",
+        "texto":
+            f"Satisfação em {satisfacao:.1f}, "
+            f"{META_SATISFACAO - satisfacao:.1f} "
+            "ponto abaixo da meta."
+    })
+
+elif satisfacao > META_SATISFACAO:
+
+    oportunidades.append(
+        f"Satisfação em {satisfacao:.1f}, "
+        f"{satisfacao - META_SATISFACAO:.1f} "
+        "ponto acima da meta."
     )
 
-    alertas.append(
-        {
-            "nivel": "medio",
-            "titulo": "Satisfação abaixo da meta",
-            "texto": (
-                f"Satisfação em {satisfacao_exib:.1f}, "
-                f"{desvio:.1f} ponto abaixo "
-                f"da meta de {META_SATISFACAO:.1f}."
-            )
-        }
-    )
-
-
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 # 4. CRESCIMENTO
-# ---------------------------------------------------------
+# ------------------------------------------------------------
 
-if crescimento_exib < META_CRESCIMENTO:
+if crescimento < META_CRESCIMENTO:
 
-    desvio = (
-        META_CRESCIMENTO - crescimento_exib
+    diferenca = META_CRESCIMENTO - crescimento
+
+    alertas.append({
+        "nivel": "🟡",
+        "titulo": "Crescimento abaixo do esperado",
+        "texto":
+            f"Crescimento de {crescimento:.1f}%, "
+            f"{diferenca:.1f} p.p. abaixo "
+            f"da meta de {META_CRESCIMENTO:.1f}%."
+    })
+
+else:
+
+    oportunidades.append(
+        f"Crescimento de {crescimento:.1f}% está "
+        f"{crescimento - META_CRESCIMENTO:.1f} "
+        "p.p. acima da meta."
     )
 
-    alertas.append(
-        {
-            "nivel": "medio",
-            "titulo": "Crescimento abaixo do esperado",
-            "texto": (
-                f"Crescimento de "
-                f"{crescimento_exib:.1f}%, "
-                f"{desvio:.1f} p.p. abaixo "
-                f"da meta de {META_CRESCIMENTO:.1f}%."
-            )
-        }
-    )
+# ------------------------------------------------------------
+# 5. CONCENTRAÇÃO COMPETITIVA
+# ------------------------------------------------------------
 
-
-# =========================================================
-# ALERTAS DE MARKET SHARE
-# =========================================================
-
-if (
-    col_player
-    and col_periodo
-    and col_share
-):
-
-    tabela_share = (
-        df_filtrado
-        .groupby(
-            [col_periodo, col_player]
-        )[col_share]
-        .mean()
-        .reset_index()
-    )
-
-    tabela_share[col_share] = pd.to_numeric(
-        tabela_share[col_share],
-        errors="coerce"
-    )
-
-    periodos_share = sorted(
-        tabela_share[col_periodo]
-        .astype(str)
-        .unique()
-    )
-
-    if len(periodos_share) >= 2:
-
-        periodo_anterior = periodos_share[-2]
-        periodo_atual = periodos_share[-1]
-
-        share_anterior = (
-            tabela_share[
-                tabela_share[col_periodo].astype(str)
-                == periodo_anterior
-            ]
-            .set_index(col_player)[col_share]
-        )
-
-        share_atual = (
-            tabela_share[
-                tabela_share[col_periodo].astype(str)
-                == periodo_atual
-            ]
-            .set_index(col_player)[col_share]
-        )
-
-        players_comuns = (
-            share_atual.index
-            .intersection(
-                share_anterior.index
-            )
-        )
-
-        for nome_player in players_comuns:
-
-            variacao = (
-                share_atual[nome_player]
-                - share_anterior[nome_player]
-            )
-
-            # Queda relevante
-            if variacao <= -0.5:
-
-                alertas.append(
-                    {
-                        "nivel": "alto",
-                        "titulo": (
-                            f"Perda de participação — "
-                            f"{nome_player}"
-                        ),
-                        "texto": (
-                            f"{nome_player} perdeu "
-                            f"{abs(variacao):.1f} p.p. "
-                            f"de Market Share entre "
-                            f"{periodo_anterior} e "
-                            f"{periodo_atual}."
-                        )
-                    }
-                )
-
-            # Ganho relevante
-            elif variacao >= 0.5:
-
-                alertas.append(
-                    {
-                        "nivel": "oportunidade",
-                        "titulo": (
-                            f"Movimento competitivo — "
-                            f"{nome_player}"
-                        ),
-                        "texto": (
-                            f"{nome_player} ganhou "
-                            f"{variacao:.1f} p.p. "
-                            f"de Market Share entre "
-                            f"{periodo_anterior} e "
-                            f"{periodo_atual}."
-                        )
-                    }
-                )
-
-
-# =========================================================
-# CONCENTRAÇÃO DE MERCADO
-# =========================================================
+concentracao_top2 = 0
 
 if col_player and col_share:
 
-    share_players = (
+    share_radar = (
         df_filtrado
         .groupby(col_player)[col_share]
         .mean()
@@ -1121,120 +819,194 @@ if col_player and col_share:
         )
     )
 
-    if len(share_players) >= 2:
+    if len(share_radar) >= 2:
 
         concentracao_top2 = (
-            share_players.iloc[0]
-            + share_players.iloc[1]
+            share_radar.iloc[0]
+            + share_radar.iloc[1]
         )
 
         if concentracao_top2 >= 60:
 
-            alertas.append(
-                {
-                    "nivel": "observacao",
-                    "titulo": "Concentração competitiva",
-                    "texto": (
-                        "Os dois maiores players "
-                        f"concentram aproximadamente "
-                        f"{concentracao_top2:.1f}% "
-                        "do Market Share monitorado."
-                    )
-                }
+            alertas.append({
+                "nivel": "🔵",
+                "titulo": "Concentração competitiva",
+                "texto":
+                    f"Os dois maiores players concentram "
+                    f"aproximadamente {concentracao_top2:.1f}% "
+                    "do Market Share monitorado."
+            })
+
+        else:
+
+            oportunidades.append(
+                "Mercado apresenta menor concentração: "
+                f"Top 2 representam {concentracao_top2:.1f}% "
+                "do share."
             )
 
+# ------------------------------------------------------------
+# 6. EXPERIÊNCIA + RETENÇÃO
+# ------------------------------------------------------------
 
-# =========================================================
-# CRUZAMENTO NPS + CHURN
-# =========================================================
+if nps < META_NPS and churn > LIMITE_CHURN:
+
+    alertas.append({
+        "nivel": "🔴",
+        "titulo":
+            "Sinal combinado de experiência e retenção",
+
+        "texto":
+            "NPS abaixo da meta ocorre simultaneamente "
+            "a churn acima do limite. O cruzamento merece "
+            "investigação para avaliar possível relação "
+            "entre experiência e perda de clientes."
+    })
+
+    alta_prioridade += 1
+
+# ------------------------------------------------------------
+# 7. CRESCIMENTO + CHURN
+# ------------------------------------------------------------
 
 if (
-    nps_exib < META_NPS
-    and churn_exib > META_CHURN
+    crescimento < META_CRESCIMENTO
+    and churn > LIMITE_CHURN
 ):
 
-    alertas.append(
-        {
-            "nivel": "alto",
-            "titulo": "Sinal combinado de experiência e retenção",
-            "texto": (
-                "NPS abaixo da meta ocorre simultaneamente "
-                "a churn acima do limite. O cruzamento merece "
-                "investigação para avaliar possível relação "
-                "entre experiência e perda de clientes."
-            )
-        }
-    )
+    alertas.append({
+        "nivel": "🔴",
+        "titulo":
+            "Pressão sobre crescimento da base",
 
+        "texto":
+            "Crescimento abaixo da meta ocorre junto de "
+            "churn acima do limite, sinalizando possível "
+            "pressão de retenção sobre a expansão da base."
+    })
 
-# =========================================================
-# CRUZAMENTO CRESCIMENTO + CHURN
-# =========================================================
+    alta_prioridade += 1
+
+# ------------------------------------------------------------
+# 8. MOVIMENTO COMPETITIVO RECENTE
+# ------------------------------------------------------------
 
 if (
-    crescimento_exib < META_CRESCIMENTO
-    and churn_exib > META_CHURN
+    col_player
+    and col_periodo
+    and col_share
 ):
 
-    alertas.append(
-        {
-            "nivel": "alto",
-            "titulo": "Pressão sobre crescimento da base",
-            "texto": (
-                "O baixo crescimento ocorre junto de churn "
-                "acima do limite, indicando um possível "
-                "desafio de retenção para expansão da base."
+    movimentos = (
+        base_crescimento
+        .groupby(
+            [col_periodo, col_player],
+            as_index=False
+        )[col_share]
+        .mean()
+    )
+
+    periodos_mov = sorted(
+        movimentos[col_periodo]
+        .astype(str)
+        .unique()
+        .tolist()
+    )
+
+    if len(periodos_mov) >= 2:
+
+        p_anterior = periodos_mov[-2]
+        p_atual = periodos_mov[-1]
+
+        anterior = movimentos[
+            movimentos[col_periodo].astype(str)
+            == p_anterior
+        ][[col_player, col_share]]
+
+        atual = movimentos[
+            movimentos[col_periodo].astype(str)
+            == p_atual
+        ][[col_player, col_share]]
+
+        comparacao = atual.merge(
+            anterior,
+            on=col_player,
+            suffixes=("_atual", "_anterior")
+        )
+
+        comparacao["variacao_pp"] = (
+            comparacao[f"{col_share}_atual"]
+            - comparacao[f"{col_share}_anterior"]
+        )
+
+        if len(comparacao) > 0:
+
+            maior_ganho = comparacao.loc[
+                comparacao["variacao_pp"].idxmax()
+            ]
+
+            maior_perda = comparacao.loc[
+                comparacao["variacao_pp"].idxmin()
+            ]
+
+            ganho = float(
+                maior_ganho["variacao_pp"]
             )
-        }
+
+            perda = float(
+                maior_perda["variacao_pp"]
+            )
+
+            if ganho >= 0.2:
+
+                oportunidades.append(
+                    f"{maior_ganho[col_player]} ganhou "
+                    f"{ganho:.1f} p.p. de Market Share "
+                    "no período mais recente."
+                )
+
+            if perda <= -0.2:
+
+                alertas.append({
+                    "nivel": "🟡",
+                    "titulo":
+                        "Perda recente de Market Share",
+
+                    "texto":
+                        f"{maior_perda[col_player]} perdeu "
+                        f"{abs(perda):.1f} p.p. de share "
+                        "no último período."
+                })
+
+# ============================================================
+# KPIs DO RADAR
+# ============================================================
+
+r1, r2, r3 = st.columns(3)
+
+with r1:
+    st.metric(
+        "Pontos de atenção",
+        len(alertas)
     )
 
-
-# =========================================================
-# EXIBIÇÃO DOS ALERTAS
-# =========================================================
-
-if len(alertas) == 0:
-
-    st.success(
-        "🟢 Nenhum ponto crítico identificado "
-        "nos indicadores monitorados."
+with r2:
+    st.metric(
+        "Alta prioridade",
+        alta_prioridade
     )
 
-else:
-
-    alertas_altos = len(
-        [
-            x for x in alertas
-            if x["nivel"] == "alto"
-        ]
+with r3:
+    st.metric(
+        "Oportunidades",
+        len(oportunidades)
     )
 
-    oportunidades = len(
-        [
-            x for x in alertas
-            if x["nivel"] == "oportunidade"
-        ]
-    )
+# ============================================================
+# ALERTAS
+# ============================================================
 
-    r1, r2, r3 = st.columns(3)
-
-    with r1:
-        st.metric(
-            "Pontos de atenção",
-            len(alertas)
-        )
-
-    with r2:
-        st.metric(
-            "Alta prioridade",
-            alertas_altos
-        )
-
-    with r3:
-        st.metric(
-            "Oportunidades",
-            oportunidades
-        )
+if len(alertas) > 0:
 
     st.warning(
         f"⚠️ {len(alertas)} sinal(is) "
@@ -1243,170 +1015,108 @@ else:
 
     for alerta in alertas:
 
-        if alerta["nivel"] == "alto":
-
-            icone = "🔴"
-
-        elif alerta["nivel"] == "medio":
-
-            icone = "🟡"
-
-        elif alerta["nivel"] == "oportunidade":
-
-            icone = "🟢"
-
-        else:
-
-            icone = "🔵"
-
         st.markdown(
-            f"""
-            **{icone} {alerta['titulo']}**
-
-            {alerta['texto']}
-            """
+            f"### {alerta['nivel']} "
+            f"{alerta['titulo']}"
         )
-
-
-# =========================================================
-# INVESTIGAÇÃO AUTOMÁTICA
-# =========================================================
-
-if st.button(
-    "✨ Investigar movimentos",
-    use_container_width=False
-):
-
-    st.subheader(
-        "🧠 Diagnóstico Analítico"
-    )
-
-    if len(alertas) == 0:
-
-        st.success(
-            "Os indicadores monitorados estão "
-            "dentro dos parâmetros definidos."
-        )
-
-    else:
 
         st.write(
-            "O radar encontrou sinais que merecem "
-            "investigação mais aprofundada."
+            alerta["texto"]
         )
 
-        # Prioridades
-        prioridades = [
-            x for x in alertas
-            if x["nivel"] == "alto"
-        ]
+else:
 
-        if prioridades:
+    st.success(
+        "🟢 Nenhum sinal crítico identificado."
+    )
 
-            st.markdown(
-                "### 🔴 Prioridades de investigação"
-            )
+# ============================================================
+# OPORTUNIDADES
+# ============================================================
 
-            for item in prioridades:
+if len(oportunidades) > 0:
 
-                st.write(
-                    f"• **{item['titulo']}** — "
-                    f"{item['texto']}"
-                )
+    st.markdown("### 🟢 Oportunidades identificadas")
 
-        # Hipóteses
-        st.markdown(
-            "### 🔎 Hipóteses para investigação"
+    for oportunidade in oportunidades:
+        st.success(
+            f"💡 {oportunidade}"
         )
 
-        if (
-            churn_exib > META_CHURN
-            and nps_exib < META_NPS
-        ):
-
-            st.write(
-                "• Avaliar se a deterioração da "
-                "experiência está associada ao aumento "
-                "da saída de clientes."
-            )
-
-        if crescimento_exib < META_CRESCIMENTO:
-
-            st.write(
-                "• Separar aquisição e cancelamentos "
-                "para identificar qual componente está "
-                "limitando o crescimento da base."
-            )
-
-        if col_share:
-
-            st.write(
-                "• Comparar movimentos de Market Share "
-                "com churn, satisfação e NPS por player."
-            )
-
-        st.info(
-            "💡 Estas são hipóteses analíticas geradas "
-            "a partir dos indicadores do protótipo. "
-            "Elas não representam relações causais comprovadas."
-        )
-
-
-# =========================================================
-# PRÓXIMA CAMADA — IA
-# =========================================================
+# ============================================================
+# IA / PLANOS DE AÇÃO
+# ============================================================
 
 st.divider()
 
-st.subheader("🤖 Market Pulse AI")
+st.markdown("## 🧠 Investigação com IA")
 
 st.caption(
-    "Camada de inteligência generativa — próxima etapa do projeto."
+    "A camada de IA transforma os sinais encontrados "
+    "pelo radar em hipóteses de investigação e possíveis "
+    "planos de ação. As recomendações devem ser validadas "
+    "com dados de negócio antes da implementação."
 )
 
-st.info(
-    "A IA será utilizada para interpretar os sinais detectados "
-    "pelo Radar, levantar hipóteses e apoiar a construção de "
-    "possíveis planos de ação."
-)
+if st.button("✨ Investigar movimentos"):
 
+    st.markdown("### Recomendações do radar")
 
-# =========================================================
-# SOBRE O PROJETO
-# =========================================================
+    if churn > LIMITE_CHURN:
+        st.info(
+            "🔎 Retenção: segmentar churn por player, região "
+            "e período para localizar onde a perda de clientes "
+            "está mais concentrada."
+        )
+
+    if nps < META_NPS:
+        st.info(
+            "🔎 Experiência: cruzar NPS com churn para avaliar "
+            "se grupos com pior experiência apresentam maior "
+            "saída de clientes."
+        )
+
+    if crescimento < META_CRESCIMENTO:
+        st.info(
+            "🔎 Crescimento: separar aquisição e perda de base "
+            "para entender se o resultado está sendo pressionado "
+            "por menor entrada ou maior cancelamento."
+        )
+
+    if concentracao_top2 >= 60:
+        st.info(
+            "🔎 Concorrência: acompanhar os movimentos dos "
+            "líderes e identificar players menores com ganho "
+            "consistente de participação."
+        )
+
+    if len(oportunidades) > 0:
+        st.success(
+            "💡 O radar também identificou movimentos positivos. "
+            "Eles podem ser analisados para entender quais práticas "
+            "ou segmentos estão contribuindo para o resultado."
+        )
+
+# ============================================================
+# SOBRE
+# ============================================================
 
 st.divider()
 
 with st.expander("ℹ️ Sobre o projeto"):
 
-    st.markdown(
+    st.write(
         """
-        **Market Pulse AI** é um protótipo experimental
-        de Inteligência de Mercado.
+        Market Pulse AI é um protótipo experimental de
+        Inteligência de Mercado desenvolvido para demonstrar
+        como dados competitivos podem ser monitorados de forma
+        automatizada.
 
-        O sistema foi desenvolvido para demonstrar como
-        dados competitivos podem apoiar:
+        O radar combina indicadores de Market Share,
+        crescimento, churn, NPS e satisfação para identificar
+        sinais que merecem investigação.
 
-        - monitoramento de mercado;
-        - acompanhamento de Market Share;
-        - análise de experiência;
-        - monitoramento de churn;
-        - comparação realizado vs. meta;
-        - identificação de movimentos competitivos;
-        - priorização de sinais de atenção;
-        - geração de hipóteses analíticas;
-        - apoio à construção de planos de ação com IA.
-
-        **Dados sintéticos**
-
-        Todos os dados utilizados neste projeto são
-        sintéticos e foram criados exclusivamente para
-        demonstração e portfólio.
-
-        **Metas ilustrativas**
-
-        As metas e limites apresentados também são
-        fictícios e não representam metas oficiais
-        das empresas exibidas.
+        Os dados utilizados neste protótipo são sintéticos e
+        não representam informações reais das empresas exibidas.
         """
     )
