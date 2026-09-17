@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import os
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 # ============================================================
 # CONFIGURAÇÃO
@@ -198,7 +199,7 @@ for coluna in [
         )
 
 # ============================================================
-# SIDEBAR / FILTROS
+# SIDEBAR
 # ============================================================
 
 st.sidebar.title("✦ CONECTA")
@@ -226,8 +227,7 @@ if col_player:
 
     if player_selecionado != "Todos":
         df_filtrado = df_filtrado[
-            df_filtrado[col_player].astype(str)
-            == player_selecionado
+            df_filtrado[col_player].astype(str) == player_selecionado
         ]
 
 if col_regiao:
@@ -242,8 +242,7 @@ if col_regiao:
 
     if regiao_selecionada != "Todas":
         df_filtrado = df_filtrado[
-            df_filtrado[col_regiao].astype(str)
-            == regiao_selecionada
+            df_filtrado[col_regiao].astype(str) == regiao_selecionada
         ]
 
 if col_periodo:
@@ -258,8 +257,7 @@ if col_periodo:
 
     if periodo_selecionado != "Todos":
         df_filtrado = df_filtrado[
-            df_filtrado[col_periodo].astype(str)
-            == periodo_selecionado
+            df_filtrado[col_periodo].astype(str) == periodo_selecionado
         ]
 
 st.sidebar.divider()
@@ -268,12 +266,7 @@ st.sidebar.caption(
     "Os filtros atualizam automaticamente os indicadores."
 )
 
-# ============================================================
-# AUTORIA
-# ============================================================
-
 st.sidebar.divider()
-
 st.sidebar.caption("PROJETO AUTORAL")
 st.sidebar.markdown("**Fernanda Barbosa**")
 
@@ -291,14 +284,12 @@ base_historica = df.copy()
 
 if col_player and player_selecionado != "Todos":
     base_historica = base_historica[
-        base_historica[col_player].astype(str)
-        == player_selecionado
+        base_historica[col_player].astype(str) == player_selecionado
     ]
 
 if col_regiao and regiao_selecionada != "Todas":
     base_historica = base_historica[
-        base_historica[col_regiao].astype(str)
-        == regiao_selecionada
+        base_historica[col_regiao].astype(str) == regiao_selecionada
     ]
 
 # ============================================================
@@ -307,10 +298,7 @@ if col_regiao and regiao_selecionada != "Todas":
 
 def media(coluna, base):
     if coluna and coluna in base.columns:
-        valor = pd.to_numeric(
-            base[coluna],
-            errors="coerce"
-        ).mean()
+        valor = pd.to_numeric(base[coluna], errors="coerce").mean()
 
         if pd.notna(valor):
             return float(valor)
@@ -320,10 +308,7 @@ def media(coluna, base):
 
 def soma(coluna, base):
     if coluna and coluna in base.columns:
-        valor = pd.to_numeric(
-            base[coluna],
-            errors="coerce"
-        ).sum()
+        valor = pd.to_numeric(base[coluna], errors="coerce").sum()
 
         if pd.notna(valor):
             return float(valor)
@@ -407,8 +392,7 @@ def filtrar_periodo(periodo):
         return base_historica.copy()
 
     return base_historica[
-        base_historica[col_periodo].astype(str)
-        == str(periodo)
+        base_historica[col_periodo].astype(str) == str(periodo)
     ].copy()
 
 
@@ -500,10 +484,7 @@ satisfacao_aa = (
 
 crescimento = 0.0
 
-if (
-    assinantes_anterior is not None
-    and assinantes_anterior != 0
-):
+if assinantes_anterior is not None and assinantes_anterior != 0:
     crescimento = (
         (assinantes - assinantes_anterior)
         / assinantes_anterior
@@ -586,7 +567,6 @@ META_NPS = 70.0
 META_SATISFACAO = 8.0
 LIMITE_CHURN = 5.0
 META_CRESCIMENTO = 5.0
-
 TOLERANCIA = 0.05
 
 # ============================================================
@@ -598,38 +578,23 @@ share_player = pd.DataFrame()
 if col_player and col_share:
     share_player = (
         base_atual
-        .groupby(
-            col_player,
-            as_index=False
-        )[col_share]
+        .groupby(col_player, as_index=False)[col_share]
         .mean()
         .dropna()
-        .sort_values(
-            col_share,
-            ascending=False
-        )
+        .sort_values(col_share, ascending=False)
     )
 
 lider_share = "—"
 lider_share_valor = 0.0
 
 if not share_player.empty:
-    lider_share = str(
-        share_player.iloc[0][col_player]
-    )
-
-    lider_share_valor = float(
-        share_player.iloc[0][col_share]
-    )
+    lider_share = str(share_player.iloc[0][col_player])
+    lider_share_valor = float(share_player.iloc[0][col_share])
 
 players_monitorados = (
     base_atual[col_player].nunique()
     if col_player else 0
 )
-
-# ============================================================
-# CONCENTRAÇÃO
-# ============================================================
 
 concentracao_top2 = 0.0
 
@@ -651,27 +616,17 @@ maior_perda_valor = 0.0
 
 comparacao_share = pd.DataFrame()
 
-if (
-    col_player
-    and col_share
-    and periodo_anterior is not None
-):
+if col_player and col_share and periodo_anterior is not None:
 
     share_anterior = (
         base_anterior
-        .groupby(
-            col_player,
-            as_index=False
-        )[col_share]
+        .groupby(col_player, as_index=False)[col_share]
         .mean()
     )
 
     share_atual_comp = (
         base_atual
-        .groupby(
-            col_player,
-            as_index=False
-        )[col_share]
+        .groupby(col_player, as_index=False)[col_share]
         .mean()
     )
 
@@ -682,6 +637,7 @@ if (
     )
 
     if not comparacao_share.empty:
+
         comparacao_share["variacao_pp"] = (
             comparacao_share[f"{col_share}_atual"]
             - comparacao_share[f"{col_share}_anterior"]
@@ -695,21 +651,11 @@ if (
             comparacao_share["variacao_pp"].idxmin()
         ]
 
-        maior_ganho_nome = str(
-            ganho[col_player]
-        )
+        maior_ganho_nome = str(ganho[col_player])
+        maior_ganho_valor = float(ganho["variacao_pp"])
 
-        maior_ganho_valor = float(
-            ganho["variacao_pp"]
-        )
-
-        maior_perda_nome = str(
-            perda[col_player]
-        )
-
-        maior_perda_valor = float(
-            perda["variacao_pp"]
-        )
+        maior_perda_nome = str(perda[col_player])
+        maior_perda_valor = float(perda["variacao_pp"])
 
 # ============================================================
 # CABEÇALHO
@@ -753,9 +699,7 @@ st.caption(
     "Customer Experience • Artificial Intelligence"
 )
 
-st.markdown(
-    "##### Projeto autoral • Fernanda Barbosa"
-)
+st.markdown("##### Projeto autoral • Fernanda Barbosa")
 
 st.caption(
     "Portfólio profissional • Inteligência de Mercado • "
@@ -767,18 +711,15 @@ s1, s2 = st.columns([3, 1])
 with s1:
     st.success(
         f"● Monitoramento ativo • "
-        f"{len(base_atual):,.0f} registros analisados"
-        .replace(",", ".")
+        f"{len(base_atual):,.0f} registros analisados".replace(",", ".")
     )
 
 with s2:
     if periodo_atual:
-        st.info(
-            f"Atualização: {periodo_atual}"
-        )
+        st.info(f"Atualização: {periodo_atual}")
 
 # ============================================================
-# GIRO
+# GIRO DE INTELIGÊNCIA
 # ============================================================
 
 st.divider()
@@ -839,12 +780,12 @@ if maior_perda_nome and maior_perda_valor <= -0.1:
         (
             "🔴",
             f"{maior_perda_nome} perdeu "
-            f"{abs(maior_perda_valor):.1f} p.p. "
-            "de Market Share."
+            f"{abs(maior_perda_valor):.1f} p.p. de Market Share."
         )
     )
 
 if movimentos_giro:
+
     st.info(
         f"◉ **{len(movimentos_giro)} movimentos "
         "relevantes identificados no período.**"
@@ -873,10 +814,7 @@ with k1:
     st.metric(
         "Base monitorada",
         formatar_base(assinantes),
-        texto_delta(
-            var_base_periodo,
-            "%"
-        )
+        texto_delta(var_base_periodo, "%")
     )
 
     if var_base_aa is not None:
@@ -888,10 +826,7 @@ with k2:
     st.metric(
         "Churn médio",
         f"{churn:.1f}%",
-        texto_delta(
-            var_churn_periodo,
-            " p.p."
-        ),
+        texto_delta(var_churn_periodo, " p.p."),
         delta_color="inverse"
     )
 
@@ -904,10 +839,7 @@ with k3:
     st.metric(
         "NPS",
         f"{nps:.0f}",
-        texto_delta(
-            var_nps_periodo,
-            " pts"
-        )
+        texto_delta(var_nps_periodo, " pts")
     )
 
     if var_nps_aa is not None:
@@ -919,10 +851,7 @@ with k4:
     st.metric(
         "Satisfação",
         f"{satisfacao:.1f}/10",
-        texto_delta(
-            var_sat_periodo,
-            " pts"
-        )
+        texto_delta(var_sat_periodo, " pts")
     )
 
     if var_sat_aa is not None:
@@ -936,10 +865,6 @@ with k5:
         f"{crescimento:+.1f}%",
         f"{crescimento - META_CRESCIMENTO:+.1f} p.p. vs. meta"
     )
-
-# ============================================================
-# COMPETITIVOS
-# ============================================================
 
 st.write("")
 
@@ -1087,9 +1012,7 @@ if col_player and col_share and not share_player.empty:
     )
 
     st.altair_chart(
-        (barras + textos).properties(
-            height=320
-        ),
+        (barras + textos).properties(height=320),
         use_container_width=True
     )
 
@@ -1121,11 +1044,7 @@ if col_player and col_periodo and col_share:
             1.5
         )
 
-        y_min = max(
-            0,
-            minimo_share - margem
-        )
-
+        y_min = max(0, minimo_share - margem)
         y_max = maximo_share + margem
 
         linha = alt.Chart(
@@ -1200,14 +1119,12 @@ if col_player and col_periodo and col_share:
         )
 
         st.altair_chart(
-            (linha + rotulos).properties(
-                height=430
-            ),
+            (linha + rotulos).properties(height=430),
             use_container_width=True
         )
 
 # ============================================================
-# RADAR
+# RADAR DE OPORTUNIDADES
 # ============================================================
 
 st.divider()
@@ -1273,9 +1190,7 @@ if col_player and col_nps:
         .groupby(col_player)[col_nps]
         .mean()
         .dropna()
-        .sort_values(
-            ascending=False
-        )
+        .sort_values(ascending=False)
     )
 
     if not nps_players.empty:
@@ -1307,9 +1222,7 @@ if col_player and col_satisfacao:
         .groupby(col_player)[col_satisfacao]
         .mean()
         .dropna()
-        .sort_values(
-            ascending=False
-        )
+        .sort_values(ascending=False)
     )
 
     if not sat_players.empty:
@@ -1387,7 +1300,7 @@ else:
     )
 
 # ============================================================
-# CONECTA IA — IA GENERATIVA REAL
+# CONECTA IA — GEMINI
 # ============================================================
 
 st.divider()
@@ -1527,7 +1440,7 @@ OPORTUNIDADES IDENTIFICADAS:
 """
 
 # ============================================================
-# MOSTRA CONTEXTO ATUAL
+# CONTEXTO ATUAL
 # ============================================================
 
 st.info(
@@ -1604,7 +1517,7 @@ for mensagem in st.session_state.mensagens_conecta:
         )
 
 # ============================================================
-# CAIXA DE PERGUNTA
+# CAMPO DE PERGUNTA
 # ============================================================
 
 pergunta_digitada = st.chat_input(
@@ -1614,7 +1527,67 @@ pergunta_digitada = st.chat_input(
 pergunta = pergunta_atalho or pergunta_digitada
 
 # ============================================================
-# CONSULTA À IA
+# INSTRUÇÕES DO CONECTA IA
+# ============================================================
+
+instrucoes_ia = """
+Você é o CONECTA IA, copiloto de Inteligência de Mercado
+do projeto CONECTA INTELIGÊNC.IA.
+
+Sua função é interpretar exclusivamente os dados sintéticos
+fornecidos pelo dashboard.
+
+REGRAS:
+
+1. Os players e indicadores apresentados fazem parte de um
+protótipo com dados sintéticos.
+
+2. Não utilize conhecimento externo para atribuir fatos reais
+às empresas ou players citados.
+
+3. Mesmo que algum nome coincida com uma empresa real,
+considere somente os dados fornecidos pelo CONECTA.
+
+4. Nunca invente números.
+
+5. Diferencie claramente evidência observada, hipótese de
+investigação e próximo passo.
+
+6. Correlação não significa causalidade.
+
+7. Se os dados não forem suficientes, diga claramente que a
+informação não está disponível no conjunto analisado.
+
+8. Responda em português do Brasil.
+
+9. Seja executivo, objetivo e analítico.
+
+10. Sempre que possível, sustente a análise com os números
+fornecidos pelo dashboard.
+
+11. Não diga que possui acesso à internet ou dados externos.
+
+12. Se perguntarem sobre mercado real ou informações externas,
+explique que a análise está limitada à base sintética monitorada
+pelo CONECTA INTELIGÊNC.IA.
+
+Quando fizer sentido, organize a resposta em:
+
+**Leitura da IA**
+Síntese objetiva.
+
+**Evidências nos dados**
+Números que sustentam a leitura.
+
+**Hipóteses para investigação**
+Possíveis explicações tratadas explicitamente como hipóteses.
+
+**Próximo passo**
+Análise recomendada.
+"""
+
+# ============================================================
+# CONSULTA AO GEMINI
 # ============================================================
 
 if pergunta:
@@ -1637,21 +1610,23 @@ if pergunta:
 
             try:
 
-                if "OPENAI_API_KEY" not in st.secrets:
+                if "GEMINI_API_KEY" not in st.secrets:
+
                     st.error(
-                        "A chave OPENAI_API_KEY não foi encontrada "
+                        "A chave GEMINI_API_KEY não foi encontrada "
                         "nos Secrets do Streamlit."
                     )
 
                 else:
 
-                    client = OpenAI(
-                        api_key=st.secrets["OPENAI_API_KEY"]
+                    client = genai.Client(
+                        api_key=st.secrets["GEMINI_API_KEY"]
                     )
 
                     historico_recente = ""
 
                     for msg in st.session_state.mensagens_conecta[-6:]:
+
                         autor = (
                             "Usuário"
                             if msg["role"] == "user"
@@ -1662,68 +1637,7 @@ if pergunta:
                             f"\n{autor}: {msg['content']}\n"
                         )
 
-                    instrucoes = """
-Você é o CONECTA IA, copiloto de Inteligência de Mercado
-do projeto CONECTA INTELIGÊNC.IA.
-
-Sua função é interpretar exclusivamente os dados sintéticos
-fornecidos pelo dashboard.
-
-REGRAS OBRIGATÓRIAS:
-
-1. Os players e indicadores apresentados fazem parte de um
-protótipo com dados sintéticos.
-
-2. Não utilize conhecimento externo para atribuir fatos reais
-às empresas ou players citados.
-
-3. Mesmo que algum nome coincida com uma empresa real,
-considere somente os dados fornecidos pelo CONECTA.
-
-4. Nunca invente números.
-
-5. Diferencie claramente:
-- evidência observada nos dados;
-- hipótese de investigação;
-- possível próximo passo.
-
-6. Correlação não significa causalidade. Não diga que um
-indicador "causou" outro sem evidência.
-
-7. Se os dados não forem suficientes para responder,
-informe isso claramente e diga qual informação seria
-necessária.
-
-8. Responda em português do Brasil.
-
-9. Seja executivo, objetivo e analítico.
-
-10. Sempre que possível, use números do contexto para
-sustentar a análise.
-
-11. Não diga que possui acesso à internet ou a dados em
-tempo real.
-
-12. Se perguntarem sobre dados externos ou atuais do mercado,
-explique que sua análise está limitada à base monitorada
-pelo CONECTA INTELIGÊNC.IA.
-
-Formato preferencial quando fizer sentido:
-
-**Leitura da IA**
-Síntese objetiva.
-
-**Evidências nos dados**
-Principais números que sustentam a leitura.
-
-**Hipóteses para investigação**
-Possíveis explicações, explicitamente tratadas como hipóteses.
-
-**Próximo passo**
-Análise recomendada para aprofundar o tema.
-"""
-
-                    entrada_completa = f"""
+                    prompt_completo = f"""
 {contexto_ia}
 
 HISTÓRICO RECENTE DA CONVERSA:
@@ -1733,25 +1647,34 @@ PERGUNTA DO USUÁRIO:
 {pergunta}
 """
 
-                    resposta = client.responses.create(
-                        model="gpt-5.6-luna",
-                        instructions=instrucoes,
-                        input=entrada_completa,
-                        max_output_tokens=700
+                    resposta = client.models.generate_content(
+                        model="gemini-2.5-flash-lite",
+                        contents=prompt_completo,
+                        config=types.GenerateContentConfig(
+                            system_instruction=instrucoes_ia,
+                            max_output_tokens=700
+                        )
                     )
 
-                    texto_resposta = resposta.output_text
+                    texto_resposta = resposta.text
 
-                    st.markdown(
-                        texto_resposta
-                    )
+                    if texto_resposta:
 
-                    st.session_state.mensagens_conecta.append(
-                        {
-                            "role": "assistant",
-                            "content": texto_resposta
-                        }
-                    )
+                        st.markdown(texto_resposta)
+
+                        st.session_state.mensagens_conecta.append(
+                            {
+                                "role": "assistant",
+                                "content": texto_resposta
+                            }
+                        )
+
+                    else:
+
+                        st.warning(
+                            "O CONECTA IA não retornou uma resposta "
+                            "para esta consulta."
+                        )
 
             except Exception as erro:
 
