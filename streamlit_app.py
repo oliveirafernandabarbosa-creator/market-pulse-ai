@@ -35,7 +35,6 @@ st.markdown("""
     border-right: 1px solid #E2E5EA !important;
 }
 
-/* Títulos e labels da sidebar */
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 {
@@ -57,31 +56,38 @@ st.markdown("""
     border-radius: 8px !important;
 }
 
-/* Texto selecionado */
 [data-testid="stSidebar"] [data-baseweb="select"] span {
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
 }
 
-/* Força o texto interno do select */
 [data-testid="stSidebar"] [data-baseweb="select"] div {
     color: #FFFFFF !important;
 }
 
-/* Setinha */
 [data-testid="stSidebar"] [data-baseweb="select"] svg {
     color: #CBD5E1 !important;
     fill: #CBD5E1 !important;
 }
 
-/* Divisórias */
 [data-testid="stSidebar"] hr {
     border-color: #DDE1E7 !important;
 }
 
-/* Links da sidebar */
-[data-testid="stSidebar"] a {
+/* ==========================================================
+   BOTÃO LINKEDIN DA SIDEBAR
+   ========================================================== */
+
+[data-testid="stSidebar"] [data-testid="stLinkButton"] a {
+    background-color: #FFFFFF !important;
     color: #2563EB !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 8px !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stLinkButton"] a p {
+    color: #2563EB !important;
+    font-weight: 600 !important;
 }
 
 /* ==========================================================
@@ -286,49 +292,15 @@ st.sidebar.caption(
 # AUTORIA NA SIDEBAR
 # ============================================================
 
-st.sidebar.markdown(
-    """
-    <div style="
-        margin-top: 18px;
-        padding-top: 4px;
-    ">
+st.sidebar.divider()
 
-        <div style="
-            font-size: 10px;
-            font-weight: 700;
-            color: #64748B;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        ">
-            PROJETO AUTORAL
-        </div>
+st.sidebar.caption("PROJETO AUTORAL")
+st.sidebar.markdown("**Fernanda Barbosa**")
 
-        <div style="
-            font-size: 14px;
-            font-weight: 700;
-            color: #172033;
-            margin-bottom: 8px;
-        ">
-            Fernanda Barbosa
-        </div>
-
-        <a
-            href="https://www.linkedin.com/in/fernanda-barbosa-489148114/"
-            target="_blank"
-            style="
-                color: #2563EB !important;
-                font-size: 13px;
-                font-weight: 600;
-                text-decoration: none;
-            "
-        >
-            LinkedIn ↗
-        </a>
-
-    </div>
-    """,
-    unsafe_allow_html=True
+st.sidebar.link_button(
+    "LinkedIn ↗",
+    "https://www.linkedin.com/in/fernanda-barbosa-489148114/",
+    use_container_width=True
 )
 
 # ============================================================
@@ -1268,11 +1240,8 @@ st.caption(
 
 oportunidades = []
 
-# GANHO DE SHARE
-if (
-    maior_ganho_nome
-    and maior_ganho_valor > 0
-):
+# Ganho de share
+if maior_ganho_nome and maior_ganho_valor > 0:
     oportunidades.append(
         {
             "titulo": "Ganho competitivo",
@@ -1284,7 +1253,7 @@ if (
         }
     )
 
-# REFERÊNCIA EM RETENÇÃO
+# Referência em retenção
 if col_player and col_churn:
 
     churn_players = (
@@ -1306,7 +1275,6 @@ if col_player and col_churn:
         )
 
         if melhor_churn < churn:
-
             oportunidades.append(
                 {
                     "titulo": "Referência em retenção",
@@ -1318,7 +1286,7 @@ if col_player and col_churn:
                 }
             )
 
-# BENCHMARK NPS
+# Benchmark NPS
 if col_player and col_nps:
 
     nps_players = (
@@ -1342,7 +1310,6 @@ if col_player and col_nps:
         )
 
         if melhor_nps > nps:
-
             oportunidades.append(
                 {
                     "titulo": "Benchmark de experiência",
@@ -1354,7 +1321,7 @@ if col_player and col_nps:
                 }
             )
 
-# SATISFAÇÃO
+# Satisfação
 if col_player and col_satisfacao:
 
     sat_players = (
@@ -1378,7 +1345,6 @@ if col_player and col_satisfacao:
         )
 
         if melhor_sat > satisfacao:
-
             oportunidades.append(
                 {
                     "titulo": "Destaque em satisfação",
@@ -1389,9 +1355,8 @@ if col_player and col_satisfacao:
                 }
             )
 
-# ESPAÇO COMPETITIVO
+# Espaço competitivo
 if concentracao_top2 < 65:
-
     oportunidades.append(
         {
             "titulo": "Espaço competitivo",
@@ -1437,14 +1402,12 @@ with r3:
 if oportunidades:
 
     for oportunidade in oportunidades:
-
         st.success(
             f"💡 **{oportunidade['titulo']}**\n\n"
             f"{oportunidade['texto']}"
         )
 
 else:
-
     st.info(
         "🔎 Nenhuma oportunidade relevante foi identificada "
         "com os critérios atuais."
@@ -1457,6 +1420,7 @@ else:
 st.divider()
 
 st.caption("INTELIGÊNCIA ARTIFICIAL")
+
 st.header("✦ CONECTA IA")
 
 st.info(
