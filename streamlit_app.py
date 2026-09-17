@@ -215,18 +215,8 @@ if col_periodo:
             == periodo_selecionado
         ]
 
-# NOVO FILTRO
-visao_selecionada = st.sidebar.radio(
-    "Visão",
-    [
-        "Executiva",
-        "Mercado",
-        "Experiência"
-    ],
-    index=0
-)
-
 st.sidebar.divider()
+
 st.sidebar.caption(
     "Os filtros atualizam automaticamente os indicadores."
 )
@@ -661,9 +651,10 @@ if (
 # CABEÇALHO
 # ============================================================
 
-st.caption("CONECTA")
-
-st.title("INTELIGÊNC.IA")
+st.markdown(
+    """<div style="margin-bottom:8px;"><span style="font-size:38px;font-weight:800;letter-spacing:-1px;">CONECTA INTELIGÊNC.</span><span style="font-size:38px;font-weight:800;letter-spacing:-1px;background:linear-gradient(90deg,#6C63FF,#00C2FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">IA</span></div>""",
+    unsafe_allow_html=True
+)
 
 st.markdown(
     "**Inteligência de Mercado & Estratégia potencializada por IA**"
@@ -1128,17 +1119,13 @@ st.caption("RADAR CONECTA")
 st.header("Radar de Oportunidades")
 
 st.caption(
-    "Diferente do Giro de Inteligência, este radar procura "
-    "movimentos positivos, vantagens competitivas e espaços "
-    "que merecem investigação."
+    "O radar procura movimentos positivos, vantagens "
+    "competitivas e espaços que merecem investigação."
 )
 
 oportunidades = []
 
-# ============================================================
-# OPORTUNIDADE 1 - GANHO DE SHARE
-# ============================================================
-
+# GANHO DE SHARE
 if (
     maior_ganho_nome
     and maior_ganho_valor > 0
@@ -1154,10 +1141,7 @@ if (
         }
     )
 
-# ============================================================
-# OPORTUNIDADE 2 - PLAYER ABAIXO DO CHURN MÉDIO
-# ============================================================
-
+# REFERÊNCIA EM RETENÇÃO
 if col_player and col_churn:
 
     churn_players = (
@@ -1191,10 +1175,7 @@ if col_player and col_churn:
                 }
             )
 
-# ============================================================
-# OPORTUNIDADE 3 - PLAYER COM MELHOR NPS
-# ============================================================
-
+# BENCHMARK NPS
 if col_player and col_nps:
 
     nps_players = (
@@ -1230,10 +1211,7 @@ if col_player and col_nps:
                 }
             )
 
-# ============================================================
-# OPORTUNIDADE 4 - SATISFAÇÃO
-# ============================================================
-
+# SATISFAÇÃO
 if col_player and col_satisfacao:
 
     sat_players = (
@@ -1268,10 +1246,7 @@ if col_player and col_satisfacao:
                 }
             )
 
-# ============================================================
-# OPORTUNIDADE 5 - MENOR CONCENTRAÇÃO
-# ============================================================
-
+# ESPAÇO COMPETITIVO
 if concentracao_top2 < 65:
 
     oportunidades.append(
@@ -1286,7 +1261,7 @@ if concentracao_top2 < 65:
     )
 
 # ============================================================
-# EXIBIÇÃO RADAR
+# EXIBIÇÃO DO RADAR
 # ============================================================
 
 r1, r2, r3 = st.columns(3)
