@@ -1755,3 +1755,65 @@ e não representam informações reais das empresas exibidas.
 st.caption(
     "CONECTA INTELIGÊNC.IA • Projeto autoral por Fernanda Barbosa • 2026"
 )
+# ============================================================
+# ABRIR O APP SEMPRE NO TOPO NO PRIMEIRO ACESSO
+# ============================================================
+
+import streamlit.components.v1 as components
+
+components.html(
+    """
+    <script>
+    (function () {
+
+        const win = window.parent;
+        const doc = win.document;
+
+        function irParaOTopo() {
+
+            // Scroll principal da página
+            win.scrollTo({
+                top: 0,
+                left: 0,
+                behavior: "instant"
+            });
+
+            // Container principal do Streamlit
+            const appContainer = doc.querySelector(
+                '[data-testid="stAppViewContainer"]'
+            );
+
+            if (appContainer) {
+                appContainer.scrollTop = 0;
+            }
+
+            // Área principal do Streamlit
+            const main = doc.querySelector(
+                '[data-testid="stMain"]'
+            );
+
+            if (main) {
+                main.scrollTop = 0;
+            }
+
+            // Remove foco de elementos que possam puxar
+            // a página para baixo, como o chat
+            if (doc.activeElement) {
+                doc.activeElement.blur();
+            }
+        }
+
+        // Executa várias vezes porque o Streamlit
+        // continua renderizando após abrir a página
+        irParaOTopo();
+        setTimeout(irParaOTopo, 100);
+        setTimeout(irParaOTopo, 300);
+        setTimeout(irParaOTopo, 700);
+        setTimeout(irParaOTopo, 1200);
+        setTimeout(irParaOTopo, 2000);
+
+    })();
+    </script>
+    """,
+    height=0
+)
