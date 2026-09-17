@@ -19,14 +19,70 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+
+/* ==========================================================
+   ÁREA PRINCIPAL
+   ========================================================== */
+
 .block-container {
     padding-top: 1.7rem;
     padding-bottom: 3rem;
 }
 
+/* ==========================================================
+   SIDEBAR CLARA
+   ========================================================== */
+
 [data-testid="stSidebar"] {
-    border-right: 1px solid rgba(120,120,120,0.20);
+    background-color: #F7F8FA !important;
+    border-right: 1px solid #E2E5EA !important;
 }
+
+/* Textos gerais da sidebar */
+[data-testid="stSidebar"] * {
+    color: #172033;
+}
+
+/* Títulos da sidebar */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #111827 !important;
+}
+
+/* Textos e labels */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p {
+    color: #374151 !important;
+}
+
+/* Campos dos filtros */
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background-color: #FFFFFF !important;
+    border: 1px solid #D5DAE2 !important;
+    color: #111827 !important;
+    border-radius: 8px !important;
+}
+
+/* Texto dentro dos filtros */
+[data-testid="stSidebar"] [data-baseweb="select"] span {
+    color: #111827 !important;
+}
+
+/* Setas e ícones */
+[data-testid="stSidebar"] svg {
+    fill: #374151 !important;
+    color: #374151 !important;
+}
+
+/* Divisórias */
+[data-testid="stSidebar"] hr {
+    border-color: #DDE1E7 !important;
+}
+
+/* ==========================================================
+   CARDS DE MÉTRICAS
+   ========================================================== */
 
 [data-testid="stMetric"] {
     border: 1px solid rgba(120,120,120,0.22);
@@ -50,6 +106,7 @@ div[data-testid="stAlert"] {
 h1, h2, h3 {
     letter-spacing: -0.3px;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -785,10 +842,7 @@ with k1:
     st.metric(
         "Base monitorada",
         formatar_base(assinantes),
-        texto_delta(
-            var_base_periodo,
-            "%"
-        )
+        texto_delta(var_base_periodo, "%")
     )
 
     if var_base_aa is not None:
@@ -800,10 +854,7 @@ with k2:
     st.metric(
         "Churn médio",
         f"{churn:.1f}%",
-        texto_delta(
-            var_churn_periodo,
-            " p.p."
-        ),
+        texto_delta(var_churn_periodo, " p.p."),
         delta_color="inverse"
     )
 
@@ -816,10 +867,7 @@ with k3:
     st.metric(
         "NPS",
         f"{nps:.0f}",
-        texto_delta(
-            var_nps_periodo,
-            " pts"
-        )
+        texto_delta(var_nps_periodo, " pts")
     )
 
     if var_nps_aa is not None:
@@ -831,10 +879,7 @@ with k4:
     st.metric(
         "Satisfação",
         f"{satisfacao:.1f}/10",
-        texto_delta(
-            var_sat_periodo,
-            " pts"
-        )
+        texto_delta(var_sat_periodo, " pts")
     )
 
     if var_sat_aa is not None:
