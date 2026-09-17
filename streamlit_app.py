@@ -665,6 +665,15 @@ st.caption(
     "Customer Experience • Artificial Intelligence"
 )
 
+st.markdown(
+    "##### Projeto autoral • Fernanda Barbosa"
+)
+
+st.caption(
+    "Portfólio profissional • Inteligência de Mercado • "
+    "Data Analytics • AI-driven Insights"
+)
+
 s1, s2 = st.columns([3, 1])
 
 with s1:
@@ -1385,39 +1394,52 @@ if st.button(
         )
 
 # ============================================================
-# SOBRE
+# SOBRE O PROJETO
 # ============================================================
 
 st.divider()
 
 with st.expander(
-    "ℹ️ Sobre o CONECTA INTELIGÊNC.IA"
+    "ℹ️ Sobre o CONECTA INTELIGÊNC.IA",
+    expanded=False
 ):
 
-    st.write(
+    st.markdown(
         """
-**CONECTA INTELIGÊNC.IA** é um protótipo de solução de
-Inteligência de Mercado & Estratégia potencializada por
-Inteligência Artificial.
+### Projeto autoral por Fernanda Barbosa
 
-A plataforma conecta dados de mercado, concorrência,
-experiência e performance para identificar movimentos,
+**CONECTA INTELIGÊNC.IA** é um projeto autoral criado e
+desenvolvido por **Fernanda Barbosa**, com o objetivo de
+explorar como **Inteligência de Mercado, análise de dados e
+Inteligência Artificial** podem ser conectadas em uma única
+solução para monitoramento e leitura de mercado.
+
+A plataforma conecta indicadores de **mercado, concorrência,
+experiência e performance** para identificar movimentos,
 riscos e oportunidades.
 
 O **Giro de Inteligência** resume os principais movimentos
-do período.
+identificados no período.
 
-O **Radar CONECTA** procura oportunidades, benchmarks e
-movimentos competitivos que merecem investigação.
+O **Radar CONECTA** identifica oportunidades, benchmarks e
+sinais competitivos que merecem investigação.
 
-A camada **CONECTA IA** transforma os sinais encontrados
-em hipóteses analíticas e possíveis caminhos de ação.
+O **CONECTA IA** transforma os sinais encontrados em
+hipóteses analíticas e possíveis caminhos de ação, apoiando
+o aprofundamento das análises.
 
-Os dados utilizados neste protótipo são sintéticos e não
-representam informações reais das empresas exibidas.
+Este projeto integra o **portfólio profissional de
+Fernanda Barbosa** e foi desenvolvido como demonstração
+prática da aplicação de Inteligência de Mercado,
+Data Analytics e Inteligência Artificial.
+
+---
+
+**Nota:** os dados utilizados neste protótipo são sintéticos
+e não representam informações reais das empresas exibidas.
         """
     )
 
 st.caption(
-    "CONECTA INTELIGÊNC.IA • Desenvolvido por Fernanda Barbosa"
+    "CONECTA INTELIGÊNC.IA • Projeto autoral por Fernanda Barbosa • 2026"
 )
