@@ -9,7 +9,7 @@ import os
 
 st.set_page_config(
     page_title="CONECTA INTELIGÊNC.IA",
-    page_icon="◉",
+    page_icon="✦",
     layout="wide"
 )
 
@@ -20,7 +20,7 @@ st.set_page_config(
 st.markdown("""
 <style>
 .block-container {
-    padding-top: 1.8rem;
+    padding-top: 1.7rem;
     padding-bottom: 3rem;
 }
 
@@ -31,7 +31,7 @@ st.markdown("""
 [data-testid="stMetric"] {
     border: 1px solid rgba(120,120,120,0.22);
     border-radius: 14px;
-    padding: 16px 16px 13px 16px;
+    padding: 16px;
     background: rgba(120,120,120,0.035);
 }
 
@@ -131,18 +131,16 @@ col_satisfacao = localizar_coluna([
 ])
 
 # ============================================================
-# CONVERTER PARA NÚMERO
+# CONVERSÃO NUMÉRICA
 # ============================================================
 
-colunas_numericas = [
+for coluna in [
     col_share,
     col_assinantes,
     col_churn,
     col_nps,
     col_satisfacao
-]
-
-for coluna in colunas_numericas:
+]:
     if coluna and coluna in df.columns:
         df[coluna] = pd.to_numeric(
             df[coluna]
@@ -156,11 +154,11 @@ for coluna in colunas_numericas:
 # FILTROS
 # ============================================================
 
-st.sidebar.title("CONECTA")
-st.sidebar.caption("Inteligência de Mercado & Estratégia")
+st.sidebar.title("✦ CONECTA")
+st.sidebar.caption("INTELIGÊNC.IA")
+st.sidebar.caption("Market Intelligence Platform")
 
 st.sidebar.divider()
-
 st.sidebar.subheader("🔎 Filtros")
 
 df_filtrado = df.copy()
@@ -171,11 +169,7 @@ periodo_selecionado = "Todos"
 
 if col_player:
     players = sorted(
-        df[col_player]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
+        df[col_player].dropna().astype(str).unique().tolist()
     )
 
     player_selecionado = st.sidebar.selectbox(
@@ -191,11 +185,7 @@ if col_player:
 
 if col_regiao:
     regioes = sorted(
-        df[col_regiao]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
+        df[col_regiao].dropna().astype(str).unique().tolist()
     )
 
     regiao_selecionada = st.sidebar.selectbox(
@@ -211,11 +201,7 @@ if col_regiao:
 
 if col_periodo:
     periodos = sorted(
-        df[col_periodo]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
+        df[col_periodo].dropna().astype(str).unique().tolist()
     )
 
     periodo_selecionado = st.sidebar.selectbox(
@@ -229,9 +215,24 @@ if col_periodo:
             == periodo_selecionado
         ]
 
+# NOVO FILTRO
+visao_selecionada = st.sidebar.radio(
+    "Visão",
+    [
+        "Executiva",
+        "Mercado",
+        "Experiência"
+    ],
+    index=0
+)
+
+st.sidebar.divider()
+st.sidebar.caption(
+    "Os filtros atualizam automaticamente os indicadores."
+)
+
 # ============================================================
 # BASE HISTÓRICA
-# Mantém Player e Região, mas ignora filtro de período
 # ============================================================
 
 base_historica = df.copy()
@@ -305,44 +306,44 @@ def lista_periodos():
 
 
 def encontrar_periodo_atual():
-    periodos_disponiveis = lista_periodos()
+    lista = lista_periodos()
 
-    if not periodos_disponiveis:
+    if not lista:
         return None
 
     if periodo_selecionado != "Todos":
         return periodo_selecionado
 
-    return periodos_disponiveis[-1]
+    return lista[-1]
 
 
-def encontrar_periodo_anterior(periodo_atual):
-    periodos_disponiveis = lista_periodos()
+def encontrar_periodo_anterior(periodo):
+    lista = lista_periodos()
 
-    if periodo_atual not in periodos_disponiveis:
+    if periodo not in lista:
         return None
 
-    indice = periodos_disponiveis.index(periodo_atual)
+    indice = lista.index(periodo)
 
     if indice == 0:
         return None
 
-    return periodos_disponiveis[indice - 1]
+    return lista[indice - 1]
 
 
-def encontrar_periodo_aa(periodo_atual):
-    if periodo_atual is None:
+def encontrar_periodo_aa(periodo):
+    if periodo is None:
         return None
 
-    texto = str(periodo_atual)
+    texto = str(periodo)
 
     try:
-        if len(texto) >= 7:
-            ano = int(texto[:4])
-            candidato = str(ano - 1) + texto[4:]
+        ano = int(texto[:4])
+        candidato = str(ano - 1) + texto[4:]
 
-            if candidato in lista_periodos():
-                return candidato
+        if candidato in lista_periodos():
+            return candidato
+
     except Exception:
         pass
 
@@ -396,72 +397,49 @@ base_aa = filtrar_periodo(periodo_aa)
 # INDICADORES
 # ============================================================
 
-assinantes = soma(
-    col_assinantes,
-    base_atual
-)
-
-churn = media(
-    col_churn,
-    base_atual
-)
-
-nps = media(
-    col_nps,
-    base_atual
-)
-
-satisfacao = media(
-    col_satisfacao,
-    base_atual
-)
+assinantes = soma(col_assinantes, base_atual)
+churn = media(col_churn, base_atual)
+nps = media(col_nps, base_atual)
+satisfacao = media(col_satisfacao, base_atual)
 
 assinantes_anterior = (
     soma(col_assinantes, base_anterior)
-    if periodo_anterior
-    else None
+    if periodo_anterior else None
 )
 
 assinantes_aa = (
     soma(col_assinantes, base_aa)
-    if periodo_aa
-    else None
+    if periodo_aa else None
 )
 
 churn_anterior = (
     media(col_churn, base_anterior)
-    if periodo_anterior
-    else None
+    if periodo_anterior else None
 )
 
 churn_aa = (
     media(col_churn, base_aa)
-    if periodo_aa
-    else None
+    if periodo_aa else None
 )
 
 nps_anterior = (
     media(col_nps, base_anterior)
-    if periodo_anterior
-    else None
+    if periodo_anterior else None
 )
 
 nps_aa = (
     media(col_nps, base_aa)
-    if periodo_aa
-    else None
+    if periodo_aa else None
 )
 
 satisfacao_anterior = (
     media(col_satisfacao, base_anterior)
-    if periodo_anterior
-    else None
+    if periodo_anterior else None
 )
 
 satisfacao_aa = (
     media(col_satisfacao, base_aa)
-    if periodo_aa
-    else None
+    if periodo_aa else None
 )
 
 # ============================================================
@@ -524,6 +502,31 @@ var_sat_aa = variacao_absoluta(
 )
 
 # ============================================================
+# ACUMULADO DO ANO
+# ============================================================
+
+ano_atual = None
+
+if periodo_atual:
+    try:
+        ano_atual = str(periodo_atual)[:4]
+    except Exception:
+        ano_atual = None
+
+base_ytd = base_historica.copy()
+
+if ano_atual and col_periodo:
+    base_ytd = base_historica[
+        base_historica[col_periodo]
+        .astype(str)
+        .str.startswith(ano_atual)
+    ].copy()
+
+nps_ytd = media(col_nps, base_ytd)
+churn_ytd = media(col_churn, base_ytd)
+satisfacao_ytd = media(col_satisfacao, base_ytd)
+
+# ============================================================
 # METAS
 # ============================================================
 
@@ -569,12 +572,11 @@ if not share_player.empty:
 
 players_monitorados = (
     base_atual[col_player].nunique()
-    if col_player
-    else 0
+    if col_player else 0
 )
 
 # ============================================================
-# CONCENTRAÇÃO TOP 2
+# CONCENTRAÇÃO
 # ============================================================
 
 concentracao_top2 = 0.0
@@ -586,7 +588,7 @@ if len(share_player) >= 2:
     )
 
 # ============================================================
-# MOVIMENTOS RECENTES
+# MOVIMENTOS DE SHARE
 # ============================================================
 
 maior_ganho_nome = None
@@ -610,7 +612,7 @@ if (
         .mean()
     )
 
-    share_atual_comparacao = (
+    share_atual_comp = (
         base_atual
         .groupby(
             col_player,
@@ -619,7 +621,7 @@ if (
         .mean()
     )
 
-    comparacao_share = share_atual_comparacao.merge(
+    comparacao_share = share_atual_comp.merge(
         share_anterior,
         on=col_player,
         suffixes=("_atual", "_anterior")
@@ -631,28 +633,28 @@ if (
             - comparacao_share[f"{col_share}_anterior"]
         )
 
-        linha_ganho = comparacao_share.loc[
+        ganho = comparacao_share.loc[
             comparacao_share["variacao_pp"].idxmax()
         ]
 
-        linha_perda = comparacao_share.loc[
+        perda = comparacao_share.loc[
             comparacao_share["variacao_pp"].idxmin()
         ]
 
         maior_ganho_nome = str(
-            linha_ganho[col_player]
+            ganho[col_player]
         )
 
         maior_ganho_valor = float(
-            linha_ganho["variacao_pp"]
+            ganho["variacao_pp"]
         )
 
         maior_perda_nome = str(
-            linha_perda[col_player]
+            perda[col_player]
         )
 
         maior_perda_valor = float(
-            linha_perda["variacao_pp"]
+            perda["variacao_pp"]
         )
 
 # ============================================================
@@ -668,20 +670,20 @@ st.markdown(
 )
 
 st.caption(
-    "Monitoramento competitivo • Performance • "
-    "Experiência • Sinais de mercado"
+    "Market Intelligence • Competitive Intelligence • "
+    "Customer Experience • Artificial Intelligence"
 )
 
-status1, status2 = st.columns([3, 1])
+s1, s2 = st.columns([3, 1])
 
-with status1:
+with s1:
     st.success(
         f"● Monitoramento ativo • "
         f"{len(base_atual):,.0f} registros analisados"
         .replace(",", ".")
     )
 
-with status2:
+with s2:
     if periodo_atual:
         st.info(
             f"Atualização: {periodo_atual}"
@@ -694,57 +696,78 @@ with status2:
 st.divider()
 
 st.caption("GIRO DE INTELIGÊNCIA")
+st.header("O que está movimentando o mercado?")
 
-st.subheader("O que está movimentando o mercado?")
-
-sinais_giro = []
+movimentos_giro = []
 
 if churn > LIMITE_CHURN + TOLERANCIA:
-    sinais_giro.append(
-        f"Churn está {churn - LIMITE_CHURN:.1f} p.p. acima do limite."
+    movimentos_giro.append(
+        (
+            "🔴",
+            f"Churn está {churn - LIMITE_CHURN:.1f} p.p. "
+            "acima do limite."
+        )
     )
 
 if nps < META_NPS - TOLERANCIA:
-    sinais_giro.append(
-        f"NPS está {META_NPS - nps:.0f} pontos abaixo da meta."
+    movimentos_giro.append(
+        (
+            "🟡",
+            f"NPS está {META_NPS - nps:.0f} pontos "
+            "abaixo da meta."
+        )
     )
 
-if crescimento < META_CRESCIMENTO - TOLERANCIA:
-    sinais_giro.append(
-        f"Crescimento está "
-        f"{META_CRESCIMENTO - crescimento:.1f} p.p. abaixo da meta."
+if crescimento < 0:
+    movimentos_giro.append(
+        (
+            "🔴",
+            f"Base apresenta retração de "
+            f"{abs(crescimento):.1f}% no último período."
+        )
     )
 
-if (
-    maior_ganho_nome
-    and maior_ganho_valor >= 0.1
-):
-    sinais_giro.append(
-        f"{maior_ganho_nome} avançou "
-        f"{maior_ganho_valor:.1f} p.p. em Market Share."
+elif crescimento < META_CRESCIMENTO - TOLERANCIA:
+    movimentos_giro.append(
+        (
+            "🟡",
+            f"Crescimento está "
+            f"{META_CRESCIMENTO - crescimento:.1f} p.p. "
+            "abaixo da meta."
+        )
     )
 
-if (
-    maior_perda_nome
-    and maior_perda_valor <= -0.1
-):
-    sinais_giro.append(
-        f"{maior_perda_nome} perdeu "
-        f"{abs(maior_perda_valor):.1f} p.p. de Market Share."
+if maior_ganho_nome and maior_ganho_valor >= 0.1:
+    movimentos_giro.append(
+        (
+            "🟢",
+            f"{maior_ganho_nome} avançou "
+            f"{maior_ganho_valor:.1f} p.p. em Market Share."
+        )
     )
 
-if sinais_giro:
+if maior_perda_nome and maior_perda_valor <= -0.1:
+    movimentos_giro.append(
+        (
+            "🔴",
+            f"{maior_perda_nome} perdeu "
+            f"{abs(maior_perda_valor):.1f} p.p. "
+            "de Market Share."
+        )
+    )
+
+if movimentos_giro:
     st.info(
-        f"◉ **{len(sinais_giro)} movimentos relevantes identificados.**"
+        f"◉ **{len(movimentos_giro)} movimentos "
+        "relevantes identificados no período.**"
     )
 
-    for sinal in sinais_giro:
-        st.write("• " + sinal)
+    for emoji, texto in movimentos_giro:
+        st.write(f"{emoji} {texto}")
 
 else:
     st.success(
-        "Nenhum movimento crítico identificado "
-        "no período monitorado."
+        "🟢 Nenhum movimento relevante identificado."
     )
 
 # ============================================================
@@ -754,7 +777,6 @@ else:
 st.divider()
 
 st.caption("VISÃO EXECUTIVA")
-
 st.header("Indicadores de Mercado")
 
 k1, k2, k3, k4, k5 = st.columns(5)
@@ -773,8 +795,6 @@ with k1:
         st.caption(
             f"{var_base_aa:+.1f}% vs. mesmo período AA"
         )
-    else:
-        st.caption("Comparação AA indisponível")
 
 with k2:
     st.metric(
@@ -789,10 +809,8 @@ with k2:
 
     if var_churn_aa is not None:
         st.caption(
-            f"{var_churn_aa:+.1f} p.p. vs. mesmo período AA"
+            f"{var_churn_aa:+.1f} p.p. vs. AA"
         )
-    else:
-        st.caption("Comparação AA indisponível")
 
 with k3:
     st.metric(
@@ -806,10 +824,8 @@ with k3:
 
     if var_nps_aa is not None:
         st.caption(
-            f"{var_nps_aa:+.1f} pts vs. mesmo período AA"
+            f"{var_nps_aa:+.1f} pts vs. AA"
         )
-    else:
-        st.caption("Comparação AA indisponível")
 
 with k4:
     st.metric(
@@ -823,10 +839,8 @@ with k4:
 
     if var_sat_aa is not None:
         st.caption(
-            f"{var_sat_aa:+.1f} pts vs. mesmo período AA"
+            f"{var_sat_aa:+.1f} pts vs. AA"
         )
-    else:
-        st.caption("Comparação AA indisponível")
 
 with k5:
     st.metric(
@@ -834,13 +848,6 @@ with k5:
         f"{crescimento:+.1f}%",
         f"{crescimento - META_CRESCIMENTO:+.1f} p.p. vs. meta"
     )
-
-    if crescimento >= META_CRESCIMENTO - TOLERANCIA:
-        st.caption("✓ Meta atingida")
-    elif crescimento >= 0:
-        st.caption("⚠ Abaixo da meta")
-    else:
-        st.caption("▼ Retração da base")
 
 # ============================================================
 # KPIs COMPETITIVOS
@@ -874,70 +881,60 @@ with c3:
     )
 
 # ============================================================
-# PERFORMANCE VS META
+# PERFORMANCE
 # ============================================================
 
 st.divider()
 
 st.caption("PERFORMANCE")
-
-st.header("Performance vs. Meta")
+st.header("Performance & Acumulado do Ano")
 
 p1, p2, p3, p4 = st.columns(4)
 
-dif_nps = nps - META_NPS
-dif_satisfacao = satisfacao - META_SATISFACAO
-dif_churn = churn - LIMITE_CHURN
-dif_crescimento = crescimento - META_CRESCIMENTO
-
 with p1:
     st.metric(
-        "NPS",
+        "NPS atual",
         f"{nps:.0f}",
-        f"{dif_nps:+.1f} pts vs. meta"
+        f"{nps - META_NPS:+.1f} pts vs. meta"
     )
 
-    if nps >= META_NPS - TOLERANCIA:
-        st.success("Meta atingida")
-    else:
-        st.warning("Abaixo da meta")
+    st.caption(
+        f"Acumulado {ano_atual}: {nps_ytd:.1f}"
+    )
 
 with p2:
     st.metric(
-        "Satisfação",
+        "Satisfação atual",
         f"{satisfacao:.1f}",
-        f"{dif_satisfacao:+.1f} pt vs. meta"
+        f"{satisfacao - META_SATISFACAO:+.1f} pt vs. meta"
     )
 
-    if satisfacao >= META_SATISFACAO - TOLERANCIA:
-        st.success("Meta atingida")
-    else:
-        st.warning("Abaixo da meta")
+    st.caption(
+        f"Acumulado {ano_atual}: {satisfacao_ytd:.1f}"
+    )
 
 with p3:
     st.metric(
-        "Churn",
+        "Churn atual",
         f"{churn:.1f}%",
-        f"{dif_churn:+.1f} p.p. vs. limite",
+        f"{churn - LIMITE_CHURN:+.1f} p.p. vs. limite",
         delta_color="inverse"
     )
 
-    if churn <= LIMITE_CHURN + TOLERANCIA:
-        st.success("Dentro do limite")
-    else:
-        st.error("Acima do limite")
+    st.caption(
+        f"Média {ano_atual}: {churn_ytd:.1f}%"
+    )
 
 with p4:
     st.metric(
-        "Crescimento",
+        "Crescimento da base",
         f"{crescimento:+.1f}%",
-        f"{dif_crescimento:+.1f} p.p. vs. meta"
+        f"{crescimento - META_CRESCIMENTO:+.1f} p.p. vs. meta"
     )
 
-    if crescimento >= META_CRESCIMENTO - TOLERANCIA:
-        st.success("Meta atingida")
-    else:
-        st.warning("Abaixo da meta")
+    st.caption(
+        "Variação vs. período anterior"
+    )
 
 # ============================================================
 # MONITORAMENTO COMPETITIVO
@@ -946,7 +943,6 @@ with p4:
 st.divider()
 
 st.caption("MERCADO & CONCORRÊNCIA")
-
 st.header("Monitoramento Competitivo")
 
 if col_player and col_share and not share_player.empty:
@@ -1002,19 +998,15 @@ if col_player and col_share and not share_player.empty:
         )
     )
 
-    grafico_share = (
-        barras + textos
-    ).properties(
-        height=320
-    )
-
     st.altair_chart(
-        grafico_share,
+        (barras + textos).properties(
+            height=320
+        ),
         use_container_width=True
     )
 
 # ============================================================
-# EVOLUÇÃO DE MARKET SHARE
+# EVOLUÇÃO DE SHARE
 # ============================================================
 
 if col_player and col_periodo and col_share:
@@ -1119,253 +1111,226 @@ if col_player and col_periodo and col_share:
             )
         )
 
-        grafico_evolucao = (
-            linha + rotulos
-        ).properties(
-            height=430
-        )
-
         st.altair_chart(
-            grafico_evolucao,
+            (linha + rotulos).properties(
+                height=430
+            ),
             use_container_width=True
         )
 
 # ============================================================
-# RADAR CONECTA
+# RADAR DE OPORTUNIDADES
 # ============================================================
 
 st.divider()
 
 st.caption("RADAR CONECTA")
+st.header("Radar de Oportunidades")
 
-st.header("Radar Inteligente")
+st.caption(
+    "Diferente do Giro de Inteligência, este radar procura "
+    "movimentos positivos, vantagens competitivas e espaços "
+    "que merecem investigação."
+)
 
-alertas = []
 oportunidades = []
-alta_prioridade = 0
-
-# CHURN
-if churn > LIMITE_CHURN + TOLERANCIA:
-
-    diferenca = churn - LIMITE_CHURN
-
-    alertas.append({
-        "nivel": "🔴",
-        "titulo": "Pressão de retenção",
-        "texto":
-            f"Churn médio em {churn:.1f}%, "
-            f"{diferenca:.1f} p.p. acima do limite "
-            f"de {LIMITE_CHURN:.1f}%."
-    })
-
-    alta_prioridade += 1
-
-elif churn < LIMITE_CHURN - 1:
-
-    oportunidades.append(
-        f"Churn de {churn:.1f}% está "
-        f"{LIMITE_CHURN - churn:.1f} p.p. "
-        "abaixo do limite."
-    )
-
-# NPS
-if nps < META_NPS - TOLERANCIA:
-
-    alertas.append({
-        "nivel": "🟡",
-        "titulo": "Experiência abaixo da meta",
-        "texto":
-            f"NPS em {nps:.0f}, "
-            f"{META_NPS - nps:.0f} pontos abaixo "
-            f"da meta de {META_NPS:.0f}."
-    })
-
-else:
-
-    oportunidades.append(
-        f"NPS em {nps:.0f} atingiu "
-        "ou superou a meta."
-    )
-
-# SATISFAÇÃO
-if satisfacao < META_SATISFACAO - TOLERANCIA:
-
-    alertas.append({
-        "nivel": "🟡",
-        "titulo": "Satisfação abaixo da meta",
-        "texto":
-            f"Satisfação em {satisfacao:.1f}, "
-            f"{META_SATISFACAO - satisfacao:.1f} "
-            "ponto abaixo da meta."
-    })
-
-elif satisfacao > META_SATISFACAO + TOLERANCIA:
-
-    oportunidades.append(
-        f"Satisfação em {satisfacao:.1f} está "
-        "acima da meta."
-    )
-
-# CRESCIMENTO
-if crescimento < META_CRESCIMENTO - TOLERANCIA:
-
-    alertas.append({
-        "nivel": "🟡",
-        "titulo": "Crescimento abaixo do esperado",
-        "texto":
-            f"Crescimento de {crescimento:.1f}%, "
-            f"{META_CRESCIMENTO - crescimento:.1f} "
-            "p.p. abaixo da meta."
-    })
-
-else:
-
-    oportunidades.append(
-        f"Crescimento de {crescimento:.1f}% "
-        "atingiu ou superou a meta."
-    )
-
-# CONCENTRAÇÃO
-if concentracao_top2 >= 60:
-
-    alertas.append({
-        "nivel": "🔵",
-        "titulo": "Concentração competitiva",
-        "texto":
-            f"Os dois maiores players concentram "
-            f"{concentracao_top2:.1f}% do Market Share."
-    })
-
-else:
-
-    oportunidades.append(
-        f"Top 2 concentram {concentracao_top2:.1f}% "
-        "do mercado monitorado."
-    )
-
-# EXPERIÊNCIA + RETENÇÃO
-if (
-    nps < META_NPS - TOLERANCIA
-    and churn > LIMITE_CHURN + TOLERANCIA
-):
-
-    alertas.append({
-        "nivel": "🔴",
-        "titulo": "Experiência + retenção",
-        "texto":
-            "NPS abaixo da meta ocorre junto de churn "
-            "acima do limite. O cruzamento merece "
-            "investigação."
-    })
-
-    alta_prioridade += 1
-
-# CRESCIMENTO + CHURN
-if (
-    crescimento < META_CRESCIMENTO - TOLERANCIA
-    and churn > LIMITE_CHURN + TOLERANCIA
-):
-
-    alertas.append({
-        "nivel": "🔴",
-        "titulo": "Pressão sobre crescimento",
-        "texto":
-            "Crescimento abaixo da meta ocorre junto "
-            "de churn acima do limite."
-    })
-
-    alta_prioridade += 1
-
-# MARKET SHARE
-if (
-    maior_ganho_nome
-    and maior_ganho_valor >= 0.2
-):
-
-    oportunidades.append(
-        f"{maior_ganho_nome} ganhou "
-        f"{maior_ganho_valor:.1f} p.p. de Market Share "
-        "no período mais recente."
-    )
-
-if (
-    maior_perda_nome
-    and maior_perda_valor <= -0.2
-):
-
-    alertas.append({
-        "nivel": "🟡",
-        "titulo": "Perda recente de Market Share",
-        "texto":
-            f"{maior_perda_nome} perdeu "
-            f"{abs(maior_perda_valor):.1f} p.p. "
-            "de participação no último período."
-    })
 
 # ============================================================
-# KPIs DO RADAR
+# OPORTUNIDADE 1 - GANHO DE SHARE
+# ============================================================
+
+if (
+    maior_ganho_nome
+    and maior_ganho_valor > 0
+):
+    oportunidades.append(
+        {
+            "titulo": "Ganho competitivo",
+            "texto":
+                f"{maior_ganho_nome} apresentou avanço de "
+                f"{maior_ganho_valor:.1f} p.p. em Market Share. "
+                "O movimento pode indicar ganho de competitividade "
+                "e merece investigação."
+        }
+    )
+
+# ============================================================
+# OPORTUNIDADE 2 - PLAYER ABAIXO DO CHURN MÉDIO
+# ============================================================
+
+if col_player and col_churn:
+
+    churn_players = (
+        base_atual
+        .groupby(col_player)[col_churn]
+        .mean()
+        .dropna()
+        .sort_values()
+    )
+
+    if not churn_players.empty:
+
+        melhor_player_churn = str(
+            churn_players.index[0]
+        )
+
+        melhor_churn = float(
+            churn_players.iloc[0]
+        )
+
+        if melhor_churn < churn:
+
+            oportunidades.append(
+                {
+                    "titulo": "Referência em retenção",
+                    "texto":
+                        f"{melhor_player_churn} apresenta churn "
+                        f"de {melhor_churn:.1f}%, abaixo da média "
+                        f"monitorada de {churn:.1f}%. Vale investigar "
+                        "quais fatores diferenciam esse player."
+                }
+            )
+
+# ============================================================
+# OPORTUNIDADE 3 - PLAYER COM MELHOR NPS
+# ============================================================
+
+if col_player and col_nps:
+
+    nps_players = (
+        base_atual
+        .groupby(col_player)[col_nps]
+        .mean()
+        .dropna()
+        .sort_values(
+            ascending=False
+        )
+    )
+
+    if not nps_players.empty:
+
+        melhor_player_nps = str(
+            nps_players.index[0]
+        )
+
+        melhor_nps = float(
+            nps_players.iloc[0]
+        )
+
+        if melhor_nps > nps:
+
+            oportunidades.append(
+                {
+                    "titulo": "Benchmark de experiência",
+                    "texto":
+                        f"{melhor_player_nps} registra NPS de "
+                        f"{melhor_nps:.0f}, acima da média monitorada "
+                        f"de {nps:.0f}. O resultado pode servir como "
+                        "benchmark competitivo."
+                }
+            )
+
+# ============================================================
+# OPORTUNIDADE 4 - SATISFAÇÃO
+# ============================================================
+
+if col_player and col_satisfacao:
+
+    sat_players = (
+        base_atual
+        .groupby(col_player)[col_satisfacao]
+        .mean()
+        .dropna()
+        .sort_values(
+            ascending=False
+        )
+    )
+
+    if not sat_players.empty:
+
+        melhor_player_sat = str(
+            sat_players.index[0]
+        )
+
+        melhor_sat = float(
+            sat_players.iloc[0]
+        )
+
+        if melhor_sat > satisfacao:
+
+            oportunidades.append(
+                {
+                    "titulo": "Destaque em satisfação",
+                    "texto":
+                        f"{melhor_player_sat} apresenta satisfação "
+                        f"de {melhor_sat:.1f}/10, acima da média "
+                        f"monitorada de {satisfacao:.1f}/10."
+                }
+            )
+
+# ============================================================
+# OPORTUNIDADE 5 - MENOR CONCENTRAÇÃO
+# ============================================================
+
+if concentracao_top2 < 65:
+
+    oportunidades.append(
+        {
+            "titulo": "Espaço competitivo",
+            "texto":
+                f"Os dois líderes concentram {concentracao_top2:.1f}% "
+                "do mercado monitorado. A participação restante pode "
+                "representar espaço relevante para movimentos dos "
+                "demais players."
+        }
+    )
+
+# ============================================================
+# EXIBIÇÃO RADAR
 # ============================================================
 
 r1, r2, r3 = st.columns(3)
 
 with r1:
     st.metric(
-        "Pontos de atenção",
-        len(alertas)
+        "Oportunidades mapeadas",
+        len(oportunidades)
     )
 
 with r2:
     st.metric(
-        "Alta prioridade",
-        alta_prioridade
+        "Maior ganho de share",
+        maior_ganho_nome if maior_ganho_nome else "—",
+        (
+            f"{maior_ganho_valor:+.1f} p.p."
+            if maior_ganho_nome
+            else "Sem movimento"
+        )
     )
 
 with r3:
     st.metric(
-        "Oportunidades",
-        len(oportunidades)
+        "Espaço fora do Top 2",
+        f"{100 - concentracao_top2:.1f}%",
+        "Participação dos demais players",
+        delta_color="off"
     )
-
-# ============================================================
-# ALERTAS
-# ============================================================
-
-if alertas:
-
-    st.warning(
-        f"⚠️ {len(alertas)} sinais identificados "
-        "pelo Radar CONECTA."
-    )
-
-    for alerta in alertas:
-
-        st.subheader(
-            f"{alerta['nivel']} {alerta['titulo']}"
-        )
-
-        st.write(
-            alerta["texto"]
-        )
-
-else:
-
-    st.success(
-        "Nenhum sinal crítico identificado."
-    )
-
-# ============================================================
-# OPORTUNIDADES
-# ============================================================
 
 if oportunidades:
-
-    st.subheader("🟢 Oportunidades identificadas")
 
     for oportunidade in oportunidades:
 
         st.success(
-            f"💡 {oportunidade}"
+            f"💡 **{oportunidade['titulo']}**\n\n"
+            f"{oportunidade['texto']}"
         )
+
+else:
+
+    st.info(
+        "🔎 Nenhuma oportunidade relevante foi identificada "
+        "com os critérios atuais."
+    )
 
 # ============================================================
 # CONECTA IA
@@ -1377,8 +1342,9 @@ st.caption("INTELIGÊNCIA ARTIFICIAL")
 
 st.header("✦ CONECTA IA")
 
-st.write(
-    "Transforme os sinais identificados pelo Radar CONECTA "
+st.info(
+    "✦ **Camada de Inteligência Artificial**\n\n"
+    "Transforme sinais, movimentos competitivos e oportunidades "
     "em hipóteses de investigação e possíveis caminhos de ação."
 )
 
@@ -1409,33 +1375,21 @@ if st.button(
 
         st.info(
             "🔎 **EXPERIÊNCIA**\n\n"
-            "Cruzar NPS com churn para investigar se "
-            "grupos com pior experiência apresentam "
-            "maior saída de clientes."
+            "Cruzar NPS com churn para investigar se grupos "
+            "com pior experiência apresentam maior saída "
+            "de clientes."
         )
 
     if crescimento < META_CRESCIMENTO - TOLERANCIA:
 
         st.info(
             "🔎 **CRESCIMENTO**\n\n"
-            "Separar aquisição e perda de base para "
-            "entender se o resultado está sendo pressionado "
-            "por menor entrada ou maior cancelamento."
+            "Separar aquisição e perda de base para entender "
+            "se o resultado está sendo pressionado por menor "
+            "entrada ou maior cancelamento."
         )
 
-    if concentracao_top2 >= 60:
-
-        st.info(
-            "🔎 **CONCORRÊNCIA**\n\n"
-            "Acompanhar os movimentos dos líderes e "
-            "identificar players menores com ganho "
-            "consistente de participação."
-        )
-
-    if (
-        maior_perda_nome
-        and maior_perda_valor < 0
-    ):
+    if maior_perda_nome and maior_perda_valor < 0:
 
         st.info(
             f"🔎 **MOVIMENTO COMPETITIVO**\n\n"
@@ -1444,17 +1398,15 @@ if st.button(
             "com churn, NPS e crescimento."
         )
 
-    if (
-        maior_ganho_nome
-        and maior_ganho_valor > 0
-    ):
+    if oportunidades:
 
         st.success(
-            f"💡 **OPORTUNIDADE**\n\n"
-            f"{maior_ganho_nome} apresentou ganho de "
-            f"{maior_ganho_valor:.1f} p.p. de share. "
-            "Investigar quais indicadores acompanharam "
-            "esse avanço."
+            f"💡 **OPORTUNIDADES**\n\n"
+            f"O Radar CONECTA encontrou "
+            f"{len(oportunidades)} oportunidade(s). "
+            "Cruzar esses sinais com os indicadores "
+            "competitivos pode revelar benchmarks e "
+            "possíveis alavancas de crescimento."
         )
 
 # ============================================================
@@ -1473,13 +1425,18 @@ with st.expander(
 Inteligência de Mercado & Estratégia potencializada por
 Inteligência Artificial.
 
-A plataforma conecta indicadores de mercado, concorrência,
+A plataforma conecta dados de mercado, concorrência,
 experiência e performance para identificar movimentos,
 riscos e oportunidades.
 
-O **Radar CONECTA** monitora alterações relevantes enquanto
-a camada **CONECTA IA** transforma os sinais em hipóteses
-de investigação e possíveis caminhos de ação.
+O **Giro de Inteligência** resume os principais movimentos
+do período.
+
+O **Radar CONECTA** procura oportunidades, benchmarks e
+movimentos competitivos que merecem investigação.
+
+A camada **CONECTA IA** transforma os sinais encontrados
+em hipóteses analíticas e possíveis caminhos de ação.
 
 Os dados utilizados neste protótipo são sintéticos e não
 representam informações reais das empresas exibidas.
