@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import os
+from openai import OpenAI
 
 # ============================================================
 # CONFIGURAÇÃO
@@ -20,15 +21,10 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* ÁREA PRINCIPAL */
 .block-container {
     padding-top: 1.7rem;
     padding-bottom: 3rem;
 }
-
-/* ==========================================================
-   SIDEBAR CLARA
-   ========================================================== */
 
 [data-testid="stSidebar"] {
     background-color: #F7F8FA !important;
@@ -45,10 +41,6 @@ st.markdown("""
 [data-testid="stSidebar"] p {
     color: #374151 !important;
 }
-
-/* ==========================================================
-   FILTROS ESCUROS COM TEXTO BRANCO
-   ========================================================== */
 
 [data-testid="stSidebar"] [data-baseweb="select"] > div {
     background-color: #0E1117 !important;
@@ -74,10 +66,6 @@ st.markdown("""
     border-color: #DDE1E7 !important;
 }
 
-/* ==========================================================
-   BOTÃO LINKEDIN DA SIDEBAR
-   ========================================================== */
-
 [data-testid="stSidebar"] [data-testid="stLinkButton"] a {
     background-color: #FFFFFF !important;
     color: #2563EB !important;
@@ -89,10 +77,6 @@ st.markdown("""
     color: #2563EB !important;
     font-weight: 600 !important;
 }
-
-/* ==========================================================
-   CARDS
-   ========================================================== */
 
 [data-testid="stMetric"] {
     border: 1px solid rgba(120,120,120,0.22);
@@ -165,9 +149,7 @@ def localizar_coluna(possiveis):
     return None
 
 
-col_player = localizar_coluna([
-    "player", "operadora", "empresa"
-])
+col_player = localizar_coluna(["player", "operadora", "empresa"])
 
 col_periodo = localizar_coluna([
     "periodo", "período", "mes", "mês", "data"
@@ -189,9 +171,7 @@ col_churn = localizar_coluna([
     "churn", "churn_medio"
 ])
 
-col_nps = localizar_coluna([
-    "nps"
-])
+col_nps = localizar_coluna(["nps"])
 
 col_satisfacao = localizar_coluna([
     "satisfacao", "satisfação", "csat"
@@ -218,7 +198,7 @@ for coluna in [
         )
 
 # ============================================================
-# FILTROS
+# SIDEBAR / FILTROS
 # ============================================================
 
 st.sidebar.title("✦ CONECTA")
@@ -289,7 +269,7 @@ st.sidebar.caption(
 )
 
 # ============================================================
-# AUTORIA NA SIDEBAR
+# AUTORIA
 # ============================================================
 
 st.sidebar.divider()
@@ -574,7 +554,7 @@ var_sat_aa = variacao_absoluta(
 )
 
 # ============================================================
-# ACUMULADO DO ANO
+# YTD
 # ============================================================
 
 ano_atual = None
@@ -668,6 +648,8 @@ maior_ganho_valor = 0.0
 
 maior_perda_nome = None
 maior_perda_valor = 0.0
+
+comparacao_share = pd.DataFrame()
 
 if (
     col_player
@@ -796,7 +778,7 @@ with s2:
         )
 
 # ============================================================
-# GIRO DE INTELIGÊNCIA
+# GIRO
 # ============================================================
 
 st.divider()
@@ -956,7 +938,7 @@ with k5:
     )
 
 # ============================================================
-# KPIs COMPETITIVOS
+# COMPETITIVOS
 # ============================================================
 
 st.write("")
@@ -1225,7 +1207,7 @@ if col_player and col_periodo and col_share:
         )
 
 # ============================================================
-# RADAR DE OPORTUNIDADES
+# RADAR
 # ============================================================
 
 st.divider()
@@ -1240,7 +1222,6 @@ st.caption(
 
 oportunidades = []
 
-# Ganho de share
 if maior_ganho_nome and maior_ganho_valor > 0:
     oportunidades.append(
         {
@@ -1253,7 +1234,6 @@ if maior_ganho_nome and maior_ganho_valor > 0:
         }
     )
 
-# Referência em retenção
 if col_player and col_churn:
 
     churn_players = (
@@ -1286,7 +1266,6 @@ if col_player and col_churn:
                 }
             )
 
-# Benchmark NPS
 if col_player and col_nps:
 
     nps_players = (
@@ -1321,7 +1300,6 @@ if col_player and col_nps:
                 }
             )
 
-# Satisfação
 if col_player and col_satisfacao:
 
     sat_players = (
@@ -1355,7 +1333,6 @@ if col_player and col_satisfacao:
                 }
             )
 
-# Espaço competitivo
 if concentracao_top2 < 65:
     oportunidades.append(
         {
@@ -1367,10 +1344,6 @@ if concentracao_top2 < 65:
                 "demais players."
         }
     )
-
-# ============================================================
-# EXIBIÇÃO DO RADAR
-# ============================================================
 
 r1, r2, r3 = st.columns(3)
 
@@ -1414,84 +1387,402 @@ else:
     )
 
 # ============================================================
-# CONECTA IA
+# CONECTA IA — IA GENERATIVA REAL
 # ============================================================
 
 st.divider()
 
 st.caption("INTELIGÊNCIA ARTIFICIAL")
-
 st.header("✦ CONECTA IA")
 
-st.info(
-    "✦ **Camada de Inteligência Artificial**\n\n"
-    "Transforme sinais, movimentos competitivos e oportunidades "
-    "em hipóteses de investigação e possíveis caminhos de ação."
+st.markdown(
+    "**Seu copiloto de Inteligência de Mercado**"
 )
 
 st.caption(
-    "As recomendações são hipóteses analíticas e devem ser "
-    "validadas com dados de negócio antes da implementação."
+    "Converse com os dados monitorados, investigue movimentos "
+    "competitivos e transforme indicadores em hipóteses de análise."
 )
 
-if st.button(
-    "✦ Investigar movimentos com CONECTA IA",
-    use_container_width=True
+# ============================================================
+# CONTEXTO DOS DADOS PARA A IA
+# ============================================================
+
+dados_players_ia = []
+
+if (
+    col_player
+    and col_share
+    and col_churn
+    and col_nps
+    and col_satisfacao
 ):
 
-    st.subheader(
-        "Leitura estratégica dos movimentos"
+    resumo_players = (
+        base_atual
+        .groupby(col_player)
+        .agg({
+            col_share: "mean",
+            col_churn: "mean",
+            col_nps: "mean",
+            col_satisfacao: "mean"
+        })
+        .reset_index()
     )
 
-    if churn > LIMITE_CHURN + TOLERANCIA:
+    for _, linha_player in resumo_players.iterrows():
 
-        st.info(
-            "🔎 **RETENÇÃO**\n\n"
-            "Segmentar churn por player, região e período "
-            "para localizar onde a perda de clientes está "
-            "mais concentrada."
+        nome_player = str(
+            linha_player[col_player]
         )
 
-    if nps < META_NPS - TOLERANCIA:
-
-        st.info(
-            "🔎 **EXPERIÊNCIA**\n\n"
-            "Cruzar NPS com churn para investigar se grupos "
-            "com pior experiência apresentam maior saída "
-            "de clientes."
+        share_p = float(
+            linha_player[col_share]
         )
 
-    if crescimento < META_CRESCIMENTO - TOLERANCIA:
-
-        st.info(
-            "🔎 **CRESCIMENTO**\n\n"
-            "Separar aquisição e perda de base para entender "
-            "se o resultado está sendo pressionado por menor "
-            "entrada ou maior cancelamento."
+        churn_p = float(
+            linha_player[col_churn]
         )
 
-    if maior_perda_nome and maior_perda_valor < 0:
-
-        st.info(
-            f"🔎 **MOVIMENTO COMPETITIVO**\n\n"
-            f"Investigar a perda de share de "
-            f"{maior_perda_nome} e cruzar o movimento "
-            "com churn, NPS e crescimento."
+        nps_p = float(
+            linha_player[col_nps]
         )
 
-    if oportunidades:
+        sat_p = float(
+            linha_player[col_satisfacao]
+        )
 
-        st.success(
-            f"💡 **OPORTUNIDADES**\n\n"
-            f"O Radar CONECTA encontrou "
-            f"{len(oportunidades)} oportunidade(s). "
-            "Cruzar esses sinais com os indicadores "
-            "competitivos pode revelar benchmarks e "
-            "possíveis alavancas de crescimento."
+        dados_players_ia.append(
+            f"{nome_player}: "
+            f"Market Share {share_p:.1f}%; "
+            f"Churn {churn_p:.1f}%; "
+            f"NPS {nps_p:.0f}; "
+            f"Satisfação {sat_p:.1f}/10."
+        )
+
+contexto_players = "\n".join(dados_players_ia)
+
+contexto_oportunidades = "\n".join(
+    [
+        f"- {item['titulo']}: {item['texto']}"
+        for item in oportunidades
+    ]
+)
+
+contexto_movimentos = "\n".join(
+    [
+        f"- {texto}"
+        for _, texto in movimentos_giro
+    ]
+)
+
+contexto_ia = f"""
+CONTEXTO DO DASHBOARD CONECTA INTELIGÊNC.IA
+
+IMPORTANTE:
+Todos os dados abaixo são sintéticos e pertencem exclusivamente
+ao protótipo CONECTA INTELIGÊNC.IA.
+
+RECORTE ATUAL:
+Player selecionado: {player_selecionado}
+Região selecionada: {regiao_selecionada}
+Período analisado: {periodo_atual}
+Período anterior: {periodo_anterior}
+
+INDICADORES:
+Base monitorada: {formatar_base(assinantes)}
+Churn médio: {churn:.1f}%
+NPS: {nps:.0f}
+Satisfação: {satisfacao:.1f}/10
+Crescimento da base: {crescimento:+.1f}%
+
+METAS DO PROTÓTIPO:
+Meta NPS: {META_NPS:.0f}
+Meta de satisfação: {META_SATISFACAO:.1f}
+Limite de churn: {LIMITE_CHURN:.1f}%
+Meta de crescimento: {META_CRESCIMENTO:.1f}%
+
+MERCADO:
+Líder de mercado: {lider_share}
+Share do líder: {lider_share_valor:.1f}%
+Concentração Top 2: {concentracao_top2:.1f}%
+Players monitorados: {players_monitorados}
+
+MAIOR MOVIMENTO POSITIVO DE SHARE:
+{maior_ganho_nome if maior_ganho_nome else "Não identificado"}
+{maior_ganho_valor:+.1f} p.p.
+
+MAIOR MOVIMENTO NEGATIVO DE SHARE:
+{maior_perda_nome if maior_perda_nome else "Não identificado"}
+{maior_perda_valor:+.1f} p.p.
+
+INDICADORES POR PLAYER:
+{contexto_players if contexto_players else "Não disponível."}
+
+MOVIMENTOS IDENTIFICADOS:
+{contexto_movimentos if contexto_movimentos else "Nenhum movimento relevante."}
+
+OPORTUNIDADES IDENTIFICADAS:
+{contexto_oportunidades if contexto_oportunidades else "Nenhuma oportunidade automática identificada."}
+"""
+
+# ============================================================
+# MOSTRA CONTEXTO ATUAL
+# ============================================================
+
+st.info(
+    f"🔎 **Contexto atual:** "
+    f"{player_selecionado} • "
+    f"{regiao_selecionada} • "
+    f"{periodo_atual}"
+)
+
+# ============================================================
+# ATALHOS
+# ============================================================
+
+st.caption("Sugestões rápidas")
+
+a1, a2, a3, a4 = st.columns(4)
+
+pergunta_atalho = None
+
+with a1:
+    if st.button(
+        "✨ Gerar insights",
+        use_container_width=True
+    ):
+        pergunta_atalho = (
+            "Quais são os principais insights deste cenário? "
+            "Priorize os movimentos mais relevantes."
+        )
+
+with a2:
+    if st.button(
+        "⚠️ Analisar riscos",
+        use_container_width=True
+    ):
+        pergunta_atalho = (
+            "Quais são os principais riscos observados nos dados "
+            "e o que deveria ser investigado primeiro?"
+        )
+
+with a3:
+    if st.button(
+        "💡 Oportunidades",
+        use_container_width=True
+    ):
+        pergunta_atalho = (
+            "Quais oportunidades de mercado e de performance "
+            "podem ser investigadas com base nesses dados?"
+        )
+
+with a4:
+    if st.button(
+        "🏆 Comparar players",
+        use_container_width=True
+    ):
+        pergunta_atalho = (
+            "Compare os players monitorados considerando "
+            "Market Share, churn, NPS e satisfação."
         )
 
 # ============================================================
-# SOBRE O PROJETO
+# HISTÓRICO DO CHAT
+# ============================================================
+
+if "mensagens_conecta" not in st.session_state:
+    st.session_state.mensagens_conecta = []
+
+for mensagem in st.session_state.mensagens_conecta:
+
+    with st.chat_message(
+        mensagem["role"]
+    ):
+        st.markdown(
+            mensagem["content"]
+        )
+
+# ============================================================
+# CAIXA DE PERGUNTA
+# ============================================================
+
+pergunta_digitada = st.chat_input(
+    "Pergunte ao CONECTA IA sobre os dados monitorados..."
+)
+
+pergunta = pergunta_atalho or pergunta_digitada
+
+# ============================================================
+# CONSULTA À IA
+# ============================================================
+
+if pergunta:
+
+    st.session_state.mensagens_conecta.append(
+        {
+            "role": "user",
+            "content": pergunta
+        }
+    )
+
+    with st.chat_message("user"):
+        st.markdown(pergunta)
+
+    with st.chat_message("assistant"):
+
+        with st.spinner(
+            "CONECTA IA está analisando os dados..."
+        ):
+
+            try:
+
+                if "OPENAI_API_KEY" not in st.secrets:
+                    st.error(
+                        "A chave OPENAI_API_KEY não foi encontrada "
+                        "nos Secrets do Streamlit."
+                    )
+
+                else:
+
+                    client = OpenAI(
+                        api_key=st.secrets["OPENAI_API_KEY"]
+                    )
+
+                    historico_recente = ""
+
+                    for msg in st.session_state.mensagens_conecta[-6:]:
+                        autor = (
+                            "Usuário"
+                            if msg["role"] == "user"
+                            else "CONECTA IA"
+                        )
+
+                        historico_recente += (
+                            f"\n{autor}: {msg['content']}\n"
+                        )
+
+                    instrucoes = """
+Você é o CONECTA IA, copiloto de Inteligência de Mercado
+do projeto CONECTA INTELIGÊNC.IA.
+
+Sua função é interpretar exclusivamente os dados sintéticos
+fornecidos pelo dashboard.
+
+REGRAS OBRIGATÓRIAS:
+
+1. Os players e indicadores apresentados fazem parte de um
+protótipo com dados sintéticos.
+
+2. Não utilize conhecimento externo para atribuir fatos reais
+às empresas ou players citados.
+
+3. Mesmo que algum nome coincida com uma empresa real,
+considere somente os dados fornecidos pelo CONECTA.
+
+4. Nunca invente números.
+
+5. Diferencie claramente:
+- evidência observada nos dados;
+- hipótese de investigação;
+- possível próximo passo.
+
+6. Correlação não significa causalidade. Não diga que um
+indicador "causou" outro sem evidência.
+
+7. Se os dados não forem suficientes para responder,
+informe isso claramente e diga qual informação seria
+necessária.
+
+8. Responda em português do Brasil.
+
+9. Seja executivo, objetivo e analítico.
+
+10. Sempre que possível, use números do contexto para
+sustentar a análise.
+
+11. Não diga que possui acesso à internet ou a dados em
+tempo real.
+
+12. Se perguntarem sobre dados externos ou atuais do mercado,
+explique que sua análise está limitada à base monitorada
+pelo CONECTA INTELIGÊNC.IA.
+
+Formato preferencial quando fizer sentido:
+
+**Leitura da IA**
+Síntese objetiva.
+
+**Evidências nos dados**
+Principais números que sustentam a leitura.
+
+**Hipóteses para investigação**
+Possíveis explicações, explicitamente tratadas como hipóteses.
+
+**Próximo passo**
+Análise recomendada para aprofundar o tema.
+"""
+
+                    entrada_completa = f"""
+{contexto_ia}
+
+HISTÓRICO RECENTE DA CONVERSA:
+{historico_recente}
+
+PERGUNTA DO USUÁRIO:
+{pergunta}
+"""
+
+                    resposta = client.responses.create(
+                        model="gpt-5.6-luna",
+                        instructions=instrucoes,
+                        input=entrada_completa,
+                        max_output_tokens=700
+                    )
+
+                    texto_resposta = resposta.output_text
+
+                    st.markdown(
+                        texto_resposta
+                    )
+
+                    st.session_state.mensagens_conecta.append(
+                        {
+                            "role": "assistant",
+                            "content": texto_resposta
+                        }
+                    )
+
+            except Exception as erro:
+
+                st.error(
+                    "Não consegui consultar o CONECTA IA neste momento."
+                )
+
+                st.caption(
+                    f"Detalhe técnico: {erro}"
+                )
+
+# ============================================================
+# LIMPAR CONVERSA
+# ============================================================
+
+if st.session_state.mensagens_conecta:
+
+    if st.button(
+        "🗑️ Limpar conversa"
+    ):
+        st.session_state.mensagens_conecta = []
+        st.rerun()
+
+st.caption(
+    "O CONECTA IA interpreta exclusivamente os dados sintéticos "
+    "disponíveis neste protótipo. As respostas representam "
+    "hipóteses analíticas e não dados externos de mercado."
+)
+
+# ============================================================
+# SOBRE
 # ============================================================
 
 st.divider()
@@ -1521,9 +1812,10 @@ identificados no período.
 O **Radar CONECTA** identifica oportunidades, benchmarks e
 sinais competitivos que merecem investigação.
 
-O **CONECTA IA** transforma os sinais encontrados em
-hipóteses analíticas e possíveis caminhos de ação, apoiando
-o aprofundamento das análises.
+O **CONECTA IA** funciona como um copiloto de Inteligência
+de Mercado, permitindo conversar com os indicadores do
+protótipo e transformar dados em leituras, hipóteses e
+próximos passos de investigação.
 
 Este projeto integra o **portfólio profissional de
 Fernanda Barbosa** e foi desenvolvido como demonstração
